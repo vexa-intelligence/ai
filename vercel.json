@@ -1,0 +1,40 @@
+{
+  "routes": [
+    {
+      "src": "/query",
+      "dest": "/api/query.py"
+    },
+    {
+      "src": "/models",
+      "dest": "/api/models.py"
+    },
+    {
+      "src": "/health",
+      "dest": "/api/health.py"
+    },
+    {
+      "src": "/image",
+      "dest": "/api/image.py"
+    },
+    {
+      "src": "/api/query",
+      "dest": "/api/query.py"
+    },
+    {
+      "src": "/api/models",
+      "dest": "/api/models.py"
+    },
+    {
+      "src": "/api/health",
+      "dest": "/api/health.py"
+    },
+    {
+      "src": "/api/image",
+      "dest": "/api/image.py"
+    },
+    {
+      "src": "/",
+      "dest": "/api/index.py"
+    }
+  ]
+}
