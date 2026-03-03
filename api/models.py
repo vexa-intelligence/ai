@@ -7,41 +7,46 @@ HORDE_API = "https://stablehorde.net/api/v2"
 CACHE_TTL = 300
 UA        = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
-FALLBACK_MODELS = {
-    "openai":             {"label": "GPT-4o",          "provider": "OpenAI"},
-    "openai-large":       {"label": "GPT-4o Large",    "provider": "OpenAI"},
-    "openai-reasoning":   {"label": "o1 Reasoning",    "provider": "OpenAI"},
-    "mistral":            {"label": "Mistral",          "provider": "Mistral AI"},
-    "llama":              {"label": "Llama (fastest)",  "provider": "Meta"},
-    "deepseek":           {"label": "DeepSeek",         "provider": "DeepSeek"},
-    "deepseek-r1":        {"label": "DeepSeek R1",      "provider": "DeepSeek"},
-    "claude-hybridspace": {"label": "Claude Hybrid",   "provider": "Anthropic"},
-    "searchgpt":          {"label": "SearchGPT",        "provider": "OpenAI"},
+BASE_MODELS = {
+    "openai":             {"label": "GPT-4o",              "provider": "OpenAI"},
+    "openai-large":       {"label": "GPT-4o Large",        "provider": "OpenAI"},
+    "openai-reasoning":   {"label": "o1 Reasoning",        "provider": "OpenAI"},
+    "openai-fast":        {"label": "GPT-OSS Fast",        "provider": "OpenAI"},
+    "mistral":            {"label": "Mistral",             "provider": "Mistral AI"},
+    "mistral-roblox":     {"label": "Mistral (Roblox)",    "provider": "Mistral AI"},
+    "llama":              {"label": "Llama 3 (fastest)",   "provider": "Meta"},
+    "llama-scaleway":     {"label": "Llama 3 (Scaleway)",  "provider": "Meta"},
+    "deepseek":           {"label": "DeepSeek V3",         "provider": "DeepSeek"},
+    "deepseek-r1":        {"label": "DeepSeek R1",         "provider": "DeepSeek"},
+    "claude-hybridspace": {"label": "Claude Hybrid",       "provider": "Anthropic"},
+    "searchgpt":          {"label": "SearchGPT",           "provider": "OpenAI"},
+    "qwen-coder":         {"label": "Qwen Coder",          "provider": "Alibaba"},
+    "phi":                {"label": "Phi-4",               "provider": "Microsoft"},
+    "gemini":             {"label": "Gemini 2.0 Flash",    "provider": "Google"},
 }
+DEFAULT_MODEL = "openai"
 
-_cache: dict = {"models": {}, "default": "openai", "image_models": [], "ts": 0}
+_cache: dict = {"models": {}, "default": DEFAULT_MODEL, "image_models": [], "ts": 0}
 
 
 def _get_text_models() -> tuple[dict, str]:
+    merged = dict(BASE_MODELS)
     try:
         r = req.get(POLLINATIONS_MODELS_URL, headers={"User-Agent": UA}, timeout=10)
         r.raise_for_status()
         data = r.json()
-        models = {}
-        default = "openai"
-        for m in data:
-            mid = m.get("name") or m.get("id", "")
-            if not mid:
-                continue
-            models[mid] = {
-                "label":    m.get("description") or m.get("name") or mid,
-                "provider": m.get("provider", ""),
-            }
-        if models:
-            return models, default
+        if isinstance(data, list) and len(data) > 1:
+            for m in data:
+                mid = m.get("name") or m.get("id", "")
+                if not mid or mid in merged:
+                    continue
+                merged[mid] = {
+                    "label":    m.get("description") or m.get("name") or mid,
+                    "provider": m.get("provider", ""),
+                }
     except Exception:
         pass
-    return FALLBACK_MODELS, "openai"
+    return merged, DEFAULT_MODEL
 
 
 def _get_image_models() -> list:

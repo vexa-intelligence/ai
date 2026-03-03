@@ -48,24 +48,36 @@ ENDPOINTS = [
             "elapsed_ms":   980,
             "prompt_chars": 312,
         },
+        "note": "GET /chat returns 405 with usage instructions instead of a server error.",
     },
     {
         "method":      "GET",
         "path":        "/models",
-        "description": "List all available text models (from Pollinations.AI) and image models (from Stable Horde)",
+        "description": "List all available text models (Pollinations.AI + curated base list) and image models (Stable Horde). Cached 5 min.",
         "example_response": {
             "success": True,
             "default": "openai",
             "models": {
-                "openai":       {"label": "GPT-4o",         "provider": "OpenAI"},
-                "openai-large": {"label": "GPT-4o Large",   "provider": "OpenAI"},
-                "llama":        {"label": "Llama (fastest)", "provider": "Meta"},
-                "mistral":      {"label": "Mistral",         "provider": "Mistral AI"},
+                "openai":             {"label": "GPT-4o",            "provider": "OpenAI"},
+                "openai-large":       {"label": "GPT-4o Large",      "provider": "OpenAI"},
+                "openai-reasoning":   {"label": "o1 Reasoning",      "provider": "OpenAI"},
+                "openai-fast":        {"label": "GPT-OSS Fast",      "provider": "OpenAI"},
+                "mistral":            {"label": "Mistral",           "provider": "Mistral AI"},
+                "llama":              {"label": "Llama 3 (fastest)", "provider": "Meta"},
+                "deepseek":           {"label": "DeepSeek V3",       "provider": "DeepSeek"},
+                "deepseek-r1":        {"label": "DeepSeek R1",       "provider": "DeepSeek"},
+                "claude-hybridspace": {"label": "Claude Hybrid",     "provider": "Anthropic"},
+                "gemini":             {"label": "Gemini 2.0 Flash",  "provider": "Google"},
+                "phi":                {"label": "Phi-4",             "provider": "Microsoft"},
+                "qwen-coder":         {"label": "Qwen Coder",        "provider": "Alibaba"},
             },
             "image_models": [
-                {"name": "Deliberate", "count": 42, "queued": 5},
+                {"name": "Deliberate",       "count": 4, "queued": 0},
+                {"name": "Dreamshaper",      "count": 3, "queued": 0},
+                {"name": "stable_diffusion", "count": 6, "queued": 0},
             ],
         },
+        "note": "Always returns a 15-model curated base list. Live Pollinations /models endpoint adds extras if available. Image 'queued' values are pixel-based (Stable Horde quirk), not job count.",
     },
     {
         "method":      "GET / POST",
@@ -88,6 +100,7 @@ ENDPOINTS = [
             "resolution":      "512x512",
             "cfg_scale":       7,
             "steps":           20,
+            "num_images":      1,
             "elapsed_ms":      34200,
             "images": [
                 {"url": "https://...webp", "b64": "<base64>", "seed": "149576367", "worker": "Caustic"},
@@ -104,8 +117,8 @@ ENDPOINTS = [
             "timestamp": 1740888000,
             "total_ms":  890,
             "checks": {
-                "pollinations": {"reachable": True, "status_code": 200, "latency_ms": 820},
-                "models":       {"reachable": True, "model_count": 12, "latency_ms": 210},
+                "pollinations": {"reachable": True, "status_code": 200, "response_preview": "Hi! How can I help?", "latency_ms": 820},
+                "models":       {"reachable": True, "model_count": 15, "latency_ms": 210},
                 "image":        {"reachable": True, "model_count": 84, "job_submitted": True, "is_possible": True, "queue_position": 12, "estimated_wait_s": 45, "latency_ms": 620},
             },
         },
@@ -117,9 +130,11 @@ ERROR_RESPONSES = [
     {"status": 400, "body": {"success": False, "error": "Missing or empty 'messages' array"}},
     {"status": 400, "body": {"success": False, "error": "messages[0].role must be 'system', 'user', or 'assistant'"}},
     {"status": 400, "body": {"success": False, "error": "Prompt exceeds maximum length of 16000 characters"}},
+    {"status": 405, "body": {"success": False, "error": "GET not supported on /chat", "frontend_only": True}},
     {"status": 429, "body": {"success": False, "error": "Rate limit exceeded. Try again shortly."}},
-    {"status": 502, "body": {"success": False, "error": "Upstream request failed"}},
+    {"status": 502, "body": {"success": False, "error": "Upstream request failed: <detail>"}},
     {"status": 502, "body": {"success": False, "error": "No workers available for this model. Check /models for valid image_models."}},
+    {"status": 502, "body": {"success": False, "error": "Generation completed but returned no images. Try again."}},
     {"status": 500, "body": {"success": False, "error": "Internal server error"}},
 ]
 
@@ -136,11 +151,11 @@ class handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         body = json.dumps({
-            "name":        "Vexa AI",
-            "description": "Free text and image generation API powered by Pollinations.AI and Stable Horde. No key required.",
-            "base_url":    "https://vexa-ai.vercel.app",
-            "timestamp":   int(time.time()),
-            "text_provider": "Pollinations.AI (https://pollinations.ai)",
+            "name":           "Vexa AI",
+            "description":    "Free text and image generation API powered by Pollinations.AI and Stable Horde. No key required.",
+            "base_url":       "https://vexa-ai.vercel.app",
+            "timestamp":      int(time.time()),
+            "text_provider":  "Pollinations.AI (https://pollinations.ai)",
             "image_provider": "Stable Horde (https://stablehorde.net)",
             "rate_limits": {
                 "/query": "20 requests / IP / 60s",

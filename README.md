@@ -104,7 +104,7 @@ Requires Python 3.9+. Dependencies: `requests` only.
 
 ```
 api/
-├── index.py     # GET /
+├── index.html     # GET /
 ├── query.py     # GET POST /query
 ├── chat.py      # POST /chat
 ├── models.py    # GET /models

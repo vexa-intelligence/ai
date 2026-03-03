@@ -57,12 +57,17 @@ def _respond(h, status: int, data: dict):
 
 def _cancel_job(job_id: str):
     try:
-        req.delete(f"{HORDE_API}/generate/status/{job_id}", headers={"apikey": ANON_KEY, "User-Agent": UA}, timeout=5)
+        req.delete(
+            f"{HORDE_API}/generate/status/{job_id}",
+            headers={"apikey": ANON_KEY, "User-Agent": UA},
+            timeout=5,
+        )
     except Exception:
         pass
 
 
-def _submit_job(prompt: str, negative_prompt: str, w: int, h: int, num: int, model: str, cfg_scale: float, steps: int) -> str:
+def _submit_job(prompt: str, negative_prompt: str, w: int, h: int,
+                num: int, model: str, cfg_scale: float, steps: int) -> str:
     payload = {
         "prompt": prompt + (f" ### {negative_prompt}" if negative_prompt else ""),
         "params": {
@@ -74,9 +79,9 @@ def _submit_job(prompt: str, negative_prompt: str, w: int, h: int, num: int, mod
             "cfg_scale":    cfg_scale,
             "seed":         str(random.randint(0, 2**31)),
         },
-        "models":  [model],
-        "r2":      True,
-        "shared":  False,
+        "models": [model],
+        "r2":     True,
+        "shared": False,
     }
     r = req.post(
         f"{HORDE_API}/generate/async",
@@ -103,7 +108,7 @@ def _poll_and_fetch(job_id: str) -> list:
         ).json()
         if not check.get("is_possible", True):
             _cancel_job(job_id)
-            raise RuntimeError(f"No workers available for this model. Check /models for valid image_models.")
+            raise RuntimeError("No workers available for this model. Check /models for valid image_models.")
         if check.get("done") or check.get("faulted"):
             break
 
@@ -176,6 +181,9 @@ def _run(h, prompt, negative_prompt, resolution, model, num, cfg_scale, steps):
     try:
         job_id = _submit_job(prompt, negative_prompt, w, h_px, num, model, cfg_scale, steps)
         images = _poll_and_fetch(job_id)
+        if not images:
+            _respond(h, 502, {"error": "Generation completed but returned no images. Try again."})
+            return
         _respond(h, 200, {
             "prompt":          prompt,
             "negative_prompt": negative_prompt or None,
@@ -187,8 +195,10 @@ def _run(h, prompt, negative_prompt, resolution, model, num, cfg_scale, steps):
             "images":          images,
             "elapsed_ms":      round((time.time() - t0) * 1000),
         })
-    except Exception as e:
+    except RuntimeError as e:
         _respond(h, 502, {"error": str(e)})
+    except Exception as e:
+        _respond(h, 500, {"error": f"Internal error: {e}"})
 
 
 class handler(BaseHTTPRequestHandler):
@@ -206,8 +216,8 @@ class handler(BaseHTTPRequestHandler):
             _respond(self, 429, {"error": "Rate limit exceeded"})
             return
         params = parse_qs(urlparse(self.path).query)
-        prompt, negative_prompt, resolution, model, num, cfg_scale, steps = _parse_params(params)
-        _run(self, prompt, negative_prompt, resolution, model, num, cfg_scale, steps)
+        args = _parse_params(params)
+        _run(self, *args)
 
     def do_POST(self):
         if _is_rate_limited(_get_ip(self)):
@@ -219,5 +229,5 @@ class handler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             _respond(self, 400, {"error": "Invalid JSON body"})
             return
-        prompt, negative_prompt, resolution, model, num, cfg_scale, steps = _parse_body(body)
-        _run(self, prompt, negative_prompt, resolution, model, num, cfg_scale, steps)
+        args = _parse_body(body)
+        _run(self, *args)
