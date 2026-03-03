@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VEXA — Free AI API</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styling/index.css">
+</head>
+
+<body>
+    <div class="bauhaus-bar"></div>
+    <nav>
+        <div class="nav-logo" onclick="go('/')">VEXA <div class="pulse-dot"></div>
+        </div>
+        <ul class="nav-links">
+            <li><a onclick="go('/')" data-path="/">Home</a></li>
+            <li><a onclick="go('/endpoints')" data-path="/endpoints">Endpoints</a></li>
+            <li><a onclick="go('/models')" data-path="/models">Models</a></li>
+            <li><a onclick="go('/playground')" data-path="/playground">Playground</a></li>
+            <li><a onclick="go('/limits')" data-path="/limits">Limits</a></li>
+        </ul>
+        <div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div>
+    </nav>
+    <div class="mobile-menu" id="mm">
+        <a onclick="go('/');closeMenu()" data-path="/">Home</a>
+        <a onclick="go('/endpoints');closeMenu()" data-path="/endpoints">Endpoints</a>
+        <a onclick="go('/models');closeMenu()" data-path="/models">Models</a>
+        <a onclick="go('/playground');closeMenu()" data-path="/playground">Playground</a>
+        <a onclick="go('/limits');closeMenu()" data-path="/limits">Limits</a>
+    </div>
+    <main id="app"></main>
+    <div id="footer-wrap">
+        <footer>
+            <div>
+                <div class="ft-logo" onclick="go('/')">VEXA <div class="pulse-dot"></div>
+                </div>
+                <p class="ft-desc">Free REST API for AI text and image generation. No account, no API key, no setup
+                    required. Built on Pollinations.AI and Stable Horde.</p>
+                <div class="ft-url">https://vexa-ai.vercel.app</div>
+                <div class="ft-status">
+                    <div class="ft-status-dot"></div>All systems operational
+                </div>
+            </div>
+            <div class="ft-col">
+                <h4>Navigate</h4>
+                <ul class="ft-links">
+                    <li><a onclick="go('/endpoints')">Endpoints</a></li>
+                    <li><a onclick="go('/models')">Models</a></li>
+                    <li><a onclick="go('/playground')">Playground</a></li>
+                    <li><a onclick="go('/limits')">Rate Limits</a></li>
+                </ul>
+            </div>
+            <div class="ft-col">
+                <h4>Resources</h4>
+                <ul class="ft-links">
+                    <li><a onclick="go('/playground')">Try Playground</a></li>
+                    <li><a onclick="go('/endpoints')">Error Reference</a></li>
+                    <li><a onclick="go('/limits')">Constraints</a></li>
+                </ul>
+                <div class="ft-powered">Powered by<br><span>Pollinations.AI</span><br><span>Stable Horde</span></div>
+            </div>
+        </footer>
+        <div class="ft-bottom">
+            <span>VEXA AI — FREE REST API</span>
+            <span>NO AUTH · NO KEYS · NO SETUP</span>
+        </div>
+        <div class="bauhaus-bar"></div>
+    </div>
+</body>
+<script src="js/index.js"></script>
+
+</html>

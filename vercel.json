@@ -1,26 +1,6 @@
 {
   "routes": [
     {
-      "src": "/query",
-      "dest": "/api/query.py"
-    },
-    {
-      "src": "/chat",
-      "dest": "/api/chat.py"
-    },
-    {
-      "src": "/models",
-      "dest": "/api/models.py"
-    },
-    {
-      "src": "/health",
-      "dest": "/api/health.py"
-    },
-    {
-      "src": "/image",
-      "dest": "/api/image.py"
-    },
-    {
       "src": "/api/query",
       "dest": "/api/query.py"
     },
@@ -41,8 +21,40 @@
       "dest": "/api/image.py"
     },
     {
+      "src": "/query",
+      "dest": "/api/query.py"
+    },
+    {
+      "src": "/chat",
+      "dest": "/api/chat.py"
+    },
+    {
+      "src": "/models",
+      "dest": "/api/models.py"
+    },
+    {
+      "src": "/health",
+      "dest": "/api/health.py"
+    },
+    {
+      "src": "/image",
+      "dest": "/api/image.py"
+    },
+    {
+      "src": "/styling/(.*)",
+      "dest": "/styling/$1"
+    },
+    {
+      "src": "/js/(.*)",
+      "dest": "/js/$1"
+    },
+    {
+      "src": "/(limits|endpoints|playground)",
+      "dest": "/index.html"
+    },
+    {
       "src": "/",
-      "dest": "/api/index.py"
+      "dest": "/index.html"
     },
     {
       "src": "/(.*)",
