@@ -8,7 +8,7 @@ Free REST API for text and image generation. No account, no API key, no setup.
 - **Images** — Community GPU cluster via [Stable Horde](https://aihorde.net)
 
 ```
-BASE_URL = https://vexa-ai.vercel.app
+BASE_URL = https://your-domain.pages.dev
 ```
 
 ---
@@ -17,7 +17,7 @@ BASE_URL = https://vexa-ai.vercel.app
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/` | API index, self-documenting |
+| `GET` | `/` | API documentation as JSON |
 | `GET` | `/models` | All text + image models (live-scraped, zero hardcoding) |
 | `GET POST` | `/query` | Single prompt → response |
 | `POST` | `/chat` | Multi-turn conversation (OpenAI-style messages array) |
@@ -30,24 +30,24 @@ BASE_URL = https://vexa-ai.vercel.app
 
 ```bash
 # Ask a question
-curl "https://vexa-ai.vercel.app/query?q=What+is+a+black+hole"
+curl "https://your-domain.pages.dev/query?q=What+is+a+black+hole"
 
 # With a specific model
-curl "https://vexa-ai.vercel.app/query?q=Hello&model=gemini-2.5-pro"
+curl "https://your-domain.pages.dev/query?q=Hello&model=toolbaz-v4.5-fast"
 
 # Multi-turn chat
-curl -X POST https://vexa-ai.vercel.app/chat \
+curl -X POST https://your-domain.pages.dev/chat \
   -H "Content-Type: application/json" \
   -d '{"messages": [{"role": "user", "content": "Hello!"}]}'
 
 # Generate an image
-curl "https://vexa-ai.vercel.app/image?q=a+red+fox+in+a+neon+city"
+curl "https://your-domain.pages.dev/image?q=a+red+fox+in+a+neon+city"
 
 # List all models
-curl "https://vexa-ai.vercel.app/models"
+curl "https://your-domain.pages.dev/models"
 
 # Check system health
-curl "https://vexa-ai.vercel.app/health"
+curl "https://your-domain.pages.dev/health"
 ```
 
 ---
@@ -92,31 +92,32 @@ In-memory per serverless instance, resets on cold starts.
 ## Project Structure
 
 ```
-api/
-├── index.py    # GET /
-├── query.py    # GET POST /query
-├── chat.py     # POST /chat
-├── models.py   # GET /models
-├── health.py   # GET /health
-└── image.py    # GET POST /image
-requirements.txt
-vercel.json
+functions/
+├── index.js       # GET / - API documentation
+├── query.js       # GET POST /query
+├── chat.js        # POST /chat
+├── models.js      # GET /models
+├── health.js      # GET /health
+├── image.js       # GET POST /image
+└── 404.js         # Fallback 404 handler
+endpoints.json     # API documentation source
+wrangler.toml      # Cloudflare Pages config
 ```
 
 ## Deploy
 
 ```bash
 git clone https://github.com/your-username/vexa-ai
-npm i -g vercel
-vercel
+npm i -g wrangler
+wrangler pages deploy .
 ```
 
 ## Run Locally
 
 ```bash
-pip install requests
-vercel dev
-# → http://localhost:3000
+npm i -g wrangler
+wrangler pages dev .
+# → http://127.0.0.1:8788
 ```
 
-Requires Python 3.9+. Only dependency: `requests`.
+No dependencies required - pure JavaScript with Cloudflare Pages Functions.

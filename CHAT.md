@@ -3,7 +3,7 @@
 Multi-turn conversation endpoint. Accepts an OpenAI-style `messages` array and handles all context concatenation server-side.
 
 ```
-POST https://vexa-ai.vercel.app/chat
+POST https://your-domain.pages.dev/chat
 ```
 
 GET requests to `/chat` return a `405` with usage instructions rather than an error, explaining how to call the endpoint correctly.
@@ -13,10 +13,10 @@ GET requests to `/chat` return a `405` with usage instructions rather than an er
 ## Request
 
 ```bash
-curl -X POST https://vexa-ai.vercel.app/chat \\
+curl -X POST https://your-domain.pages.dev/chat \\
   -H "Content-Type: application/json" \\
   -d '{
-    "model": "gemini-2.5-pro",
+    "model": "toolbaz-v4.5-fast",
     "messages": [
       { "role": "system",    "content": "You are a helpful assistant. Be concise." },
       { "role": "user",      "content": "What is the speed of light?" },
@@ -48,7 +48,7 @@ curl -X POST https://vexa-ai.vercel.app/chat \\
 {
   "success": true,
   "message": { "role": "assistant", "content": "It takes about 1.28 seconds." },
-  "model": "gemini-2.5-pro",
+  "model": "toolbaz-v4.5-fast",
   "elapsed_ms": 980,
   "prompt_chars": 312
 }
@@ -80,9 +80,9 @@ You are responsible for passing the full history each time.
 ```js
 const history = [{ role: 'system', content: 'You are a concise assistant.' }];
 
-async function chat(msg, model = 'deepseek-v3.1') {
+async function chat(msg, model = 'toolbaz-v4.5-fast') {
   history.push({ role: 'user', content: msg });
-  const res = await fetch('https://vexa-ai.vercel.app/chat', {
+  const res = await fetch('https://your-domain.pages.dev/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ model, messages: history })
@@ -100,9 +100,9 @@ import requests
 
 history = [{'role': 'system', 'content': 'You are a concise assistant.'}]
 
-def chat(msg, model='deepseek-v3.1'):
+def chat(msg, model='toolbaz-v4.5-fast'):
     history.append({'role': 'user', 'content': msg})
-    r = requests.post('https://vexa-ai.vercel.app/chat', json={'model': model, 'messages': history})
+    r = requests.post('https://your-domain.pages.dev/chat', json={'model': model, 'messages': history})
     reply = r.json()['message']['content']
     history.append({'role': 'assistant', 'content': reply})
     return reply

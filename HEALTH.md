@@ -3,7 +3,7 @@
 Live status check for all services your site actually uses.
 
 ```
-GET https://vexa-ai.vercel.app/health
+GET https://your-domain.pages.dev/health
 ```
 
 Checks the full Toolbaz auth flow (page reachability + token exchange) and the Stable Horde image pipeline (worker list + a real submitted-then-cancelled job).

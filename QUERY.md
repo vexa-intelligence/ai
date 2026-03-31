@@ -3,8 +3,8 @@
 Send a single prompt to any available Toolbaz AI model and get a text response.
 
 ```
-GET  https://vexa-ai.vercel.app/query
-POST https://vexa-ai.vercel.app/query
+GET  https://your-domain.pages.dev/query
+POST https://your-domain.pages.dev/query
 ```
 
 ---
@@ -12,8 +12,8 @@ POST https://vexa-ai.vercel.app/query
 ## GET
 
 ```bash
-curl "https://vexa-ai.vercel.app/query?q=What+is+a+black+hole"
-curl "https://vexa-ai.vercel.app/query?q=Hello&model=gemini-2.5-pro"
+curl "https://your-domain.pages.dev/query?q=What+is+a+black+hole"
+curl "https://your-domain.pages.dev/query?q=Hello&model=toolbaz-v4.5-fast"
 ```
 
 ### Parameters
@@ -28,9 +28,9 @@ curl "https://vexa-ai.vercel.app/query?q=Hello&model=gemini-2.5-pro"
 ## POST
 
 ```bash
-curl -X POST https://vexa-ai.vercel.app/query \
+curl -X POST https://your-domain.pages.dev/query \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "Explain quantum computing", "model": "deepseek-v3.1"}'
+  -d '{"prompt": "Explain quantum computing", "model": "toolbaz-v4.5-fast"}'
 ```
 
 ### Body fields
@@ -60,10 +60,10 @@ curl -X POST https://vexa-ai.vercel.app/query \
 ### JavaScript
 
 ```js
-const res = await fetch('https://vexa-ai.vercel.app/query', {
+const res = await fetch('https://your-domain.pages.dev/query', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ prompt: 'Hello!', model: 'gpt-5' })
+  body: JSON.stringify({ prompt: 'Hello!', model: 'toolbaz-v4.5-fast' })
 });
 const data = await res.json();
 console.log(data.response);
@@ -73,9 +73,9 @@ console.log(data.response);
 
 ```python
 import requests
-r = requests.post('https://vexa-ai.vercel.app/query', json={
+r = requests.post('https://your-domain.pages.dev/query', json={
     'prompt': 'What is a neural network?',
-    'model': 'deepseek-v3.1',
+    'model': 'toolbaz-v4.5-fast',
 })
 print(r.json()['response'])
 ```

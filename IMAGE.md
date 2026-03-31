@@ -3,8 +3,8 @@
 Generate images via [Stable Horde](https://aihorde.net) — free, no API key required, community-powered GPU network.
 
 ```
-GET  https://vexa-ai.vercel.app/image
-POST https://vexa-ai.vercel.app/image
+GET  https://your-domain.pages.dev/image
+POST https://your-domain.pages.dev/image
 ```
 
 ---
@@ -111,10 +111,10 @@ Use `/models` to get the live list with real-time worker counts. Pass the exact 
 
 ```bash
 # Basic
-curl "https://vexa-ai.vercel.app/image?q=a+sunset+over+mountains"
+curl "https://your-domain.pages.dev/image?q=a+sunset+over+mountains"
 
 # Full options
-curl "https://vexa-ai.vercel.app/image?q=a+portrait+of+a+knight,+dramatic+lighting&negative=blurry,watermark&model=Realistic+Vision&resolution=512x768&steps=30&cfg=7.5&sampler=k_dpmpp_2m&num=2&seed=42"
+curl "https://your-domain.pages.dev/image?q=a+portrait+of+a+knight,+dramatic+lighting&negative=blurry,watermark&model=Realistic+Vision&resolution=512x768&steps=30&cfg=7.5&sampler=k_dpmpp_2m&num=2&seed=42"
 ```
 
 ---
@@ -122,7 +122,7 @@ curl "https://vexa-ai.vercel.app/image?q=a+portrait+of+a+knight,+dramatic+lighti
 ## POST
 
 ```bash
-curl -X POST https://vexa-ai.vercel.app/image \
+curl -X POST https://your-domain.pages.dev/image \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "a highly detailed fantasy castle on a cliff at sunset, dramatic lighting, volumetric fog",
@@ -192,7 +192,7 @@ curl -X POST https://vexa-ai.vercel.app/image \
 ```
 
 ```js
-const res = await fetch('https://vexa-ai.vercel.app/image', {
+const res = await fetch('https://your-domain.pages.dev/image', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ prompt: 'a mountain lake at sunrise', model: 'Dreamshaper' })

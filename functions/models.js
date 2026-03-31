@@ -1,0 +1,135 @@
+const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+const CLIENT_AGENT = "vexa-api:1.0:github.com/vexa-ai";
+const TOOLBAZ_PAGE_URL = "https://toolbaz.com/writer/chat-gpt-alternative";
+const HORDE_WORKERS_URL = "https://aihorde.net/api/v2/workers?type=image";
+const HORDE_MODELREF_URL = "https://aihorde.net/api/model_references/v2/image_generation";
+const ANON_KEY = "0000000000";
+const CACHE_TTL = 300000;
+const DEFAULT_TEXT_MODEL = "toolbaz-v4.5-fast";
+
+const cache = { textModels: {}, default: DEFAULT_TEXT_MODEL, imageModels: [], ts: 0 };
+
+function unescapeHtml(str) {
+    return str.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#039;/g, "'");
+}
+
+function scrapeTextModels(html) {
+    const selectMatch = html.match(/<select[^>]*\bname=["']?model["']?[^>]*>([\s\S]*?)(?:<\/select>|$)/i);
+    if (!selectMatch) return [{}, DEFAULT_TEXT_MODEL];
+    const block = selectMatch[1];
+
+    const valueToLabel = {};
+    const keys = [];
+    const seen = new Set();
+    for (const m of block.matchAll(/<option[^>]*\bvalue=["']?([^"'>\s]+)["']?[^>]*>\s*([^\n<]+)/gi)) {
+        const val = unescapeHtml(m[1].trim());
+        const label = unescapeHtml(m[2].trim());
+        if (val && !seen.has(val)) { keys.push(val); seen.add(val); valueToLabel[val] = label; }
+    }
+
+    const providerMap = {};
+    const segments = html.split(/(By\s+[^\n<]{2,60})/);
+    let currentProvider = "";
+    for (const seg of segments) {
+        const by = seg.match(/^By\s+(.+)/);
+        if (by) {
+            currentProvider = by[1].replace(/[^\w\s()]/g, "").trim();
+        } else {
+            for (const m of seg.matchAll(/data-value=(?:["']?)([^"'>\s]+)/gi)) {
+                if (!providerMap[m[1].trim()]) providerMap[m[1].trim()] = currentProvider;
+            }
+        }
+    }
+
+    const dvPositions = [...html.matchAll(/data-value=(?:["']?)([^"'>\s]+)/gi)].map(m => ({ start: m.index, val: m[1] }));
+    const speedMap = {};
+    const qualityMap = {};
+    dvPositions.forEach(({ start, val }, i) => {
+        const end = i + 1 < dvPositions.length ? dvPositions[i + 1].start : start + 2000;
+        const window = html.slice(start, end);
+        const spd = window.match(/(\d+)\s*W\/s/);
+        const qlt = window.match(/quality-indicator[^>]*>(?:\s*<[^>]+>)*\s*(\d+)/);
+        if (spd) speedMap[val] = parseInt(spd[1]);
+        if (qlt) qualityMap[val] = parseInt(qlt[1]);
+    });
+
+    const models = {};
+    for (const val of keys) {
+        models[val] = { label: valueToLabel[val] || val, provider: providerMap[val] || "", speed: speedMap[val] || 0, quality: qualityMap[val] || 0 };
+    }
+    const def = models[DEFAULT_TEXT_MODEL] ? DEFAULT_TEXT_MODEL : (keys[0] || DEFAULT_TEXT_MODEL);
+    return [models, def];
+}
+
+async function fetchTextModels() {
+    try {
+        const r = await fetch(TOOLBAZ_PAGE_URL, { headers: { "User-Agent": UA } });
+        if (!r.ok) return [{}, DEFAULT_TEXT_MODEL];
+        const html = await r.text();
+        return scrapeTextModels(html);
+    } catch (_) { return [{}, DEFAULT_TEXT_MODEL]; }
+}
+
+async function fetchImageModels() {
+    const headers = { "User-Agent": UA, "Client-Agent": CLIENT_AGENT, "apikey": ANON_KEY };
+    let workersErr = "";
+    try {
+        const r = await fetch(HORDE_WORKERS_URL, { headers });
+        if (!r.ok) throw new Error(`status ${r.status}`);
+        const workers = await r.json();
+        if (Array.isArray(workers) && workers.length) {
+            const counts = {};
+            for (const w of workers) {
+                if (!w.online) continue;
+                for (const name of (w.models || [])) counts[name] = (counts[name] || 0) + 1;
+            }
+            if (Object.keys(counts).length) {
+                return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 30).map(([name, count]) => ({ name, count }));
+            }
+        }
+        workersErr = "empty or non-list response";
+    } catch (e) { workersErr = e.message; }
+    try {
+        const r = await fetch(HORDE_MODELREF_URL, { headers });
+        if (!r.ok) throw new Error(`status ${r.status}`);
+        const data = await r.json();
+        if (typeof data === "object" && !Array.isArray(data)) {
+            return Object.keys(data).sort().slice(0, 30).map(name => ({ name, count: 0 }));
+        }
+        if (Array.isArray(data)) {
+            return data.slice(0, 30).filter(m => m.name).map(m => ({ name: m.name, count: 0 }));
+        }
+    } catch (e) { return [{ _error: `workers: ${workersErr} | modelref: ${e.message}` }]; }
+    return [{ _error: `workers: ${workersErr} | modelref: unexpected shape` }];
+}
+
+async function refresh() {
+    const now = Date.now();
+    if (cache.textModels && Object.keys(cache.textModels).length > 0 && now - cache.ts < CACHE_TTL) return cache;
+    const [textModels, def] = await fetchTextModels();
+    cache.textModels = textModels;
+    cache.default = def;
+    cache.imageModels = await fetchImageModels();
+    cache.ts = now;
+    return cache;
+}
+
+function corsHeaders() {
+    return {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Content-Type": "application/json",
+    };
+}
+
+export async function onRequest({ request }) {
+    if (request.method === "OPTIONS") {
+        return new Response(null, { status: 204, headers: corsHeaders() });
+    }
+    if (request.method !== "GET") {
+        return Response.json({ success: false, error: "Method not allowed" }, { status: 405, headers: corsHeaders() });
+    }
+    const c = await refresh();
+    return Response.json({ success: true, default: c.default, models: c.textModels, image_models: c.imageModels }, { status: 200, headers: corsHeaders() });
+}
