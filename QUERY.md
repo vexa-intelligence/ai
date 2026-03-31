@@ -3,8 +3,8 @@
 Send a single prompt to any available Toolbaz AI model and get a text response.
 
 ```
-GET  https://your-domain.pages.dev/query
-POST https://your-domain.pages.dev/query
+GET  /query
+POST /query
 ```
 
 ---
@@ -12,8 +12,8 @@ POST https://your-domain.pages.dev/query
 ## GET
 
 ```bash
-curl "https://your-domain.pages.dev/query?q=What+is+a+black+hole"
-curl "https://your-domain.pages.dev/query?q=Hello&model=toolbaz-v4.5-fast"
+curl "/query?q=What+is+a+black+hole"
+curl "/query?q=Hello&model=toolbaz-v4.5-fast"
 ```
 
 ### Parameters
@@ -28,7 +28,7 @@ curl "https://your-domain.pages.dev/query?q=Hello&model=toolbaz-v4.5-fast"
 ## POST
 
 ```bash
-curl -X POST https://your-domain.pages.dev/query \
+curl -X POST /query \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Explain quantum computing", "model": "toolbaz-v4.5-fast"}'
 ```
@@ -60,7 +60,7 @@ curl -X POST https://your-domain.pages.dev/query \
 ### JavaScript
 
 ```js
-const res = await fetch('https://your-domain.pages.dev/query', {
+const res = await fetch('/query', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ prompt: 'Hello!', model: 'toolbaz-v4.5-fast' })
@@ -73,7 +73,7 @@ console.log(data.response);
 
 ```python
 import requests
-r = requests.post('https://your-domain.pages.dev/query', json={
+r = requests.post('/query', json={
     'prompt': 'What is a neural network?',
     'model': 'toolbaz-v4.5-fast',
 })

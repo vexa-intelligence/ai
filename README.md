@@ -8,7 +8,7 @@ Free REST API for text and image generation. No account, no API key, no setup.
 - **Images** — DeepAI text-to-image, proxied (no direct image URLs exposed)
 
 ```
-BASE_URL = https://your-domain.pages.dev
+BASE_URL = 
 ```
 
 ---
@@ -31,27 +31,27 @@ BASE_URL = https://your-domain.pages.dev
 
 ```bash
 # Ask a question
-curl "https://your-domain.pages.dev/query?q=What+is+a+black+hole"
+curl "/query?q=What+is+a+black+hole"
 
 # With a specific model
-curl "https://your-domain.pages.dev/query?q=Hello&model=toolbaz-v4.5-fast"
+curl "/query?q=Hello&model=toolbaz-v4.5-fast"
 
 # Multi-turn chat
-curl -X POST https://your-domain.pages.dev/chat \
+curl -X POST /chat \
   -H "Content-Type: application/json" \
   -d '{"messages": [{"role": "user", "content": "Hello!"}]}'
 
 # Generate an image (default: HD model, Speed preference)
-curl "https://your-domain.pages.dev/image?q=a+red+fox+in+a+neon+city"
+curl "/image?q=a+red+fox+in+a+neon+city"
 
 # Generate with specific preference
-curl "https://your-domain.pages.dev/image?q=a+castle&preference=quality"
+curl "/image?q=a+castle&preference=quality"
 
 # List all models
-curl "https://your-domain.pages.dev/models"
+curl "/models"
 
 # Check system health
-curl "https://your-domain.pages.dev/health"
+curl "/health"
 ```
 
 ---

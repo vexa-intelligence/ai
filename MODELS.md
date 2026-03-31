@@ -1,7 +1,7 @@
 # Models
 
 ```
-GET https://your-domain.pages.dev/models
+GET /models
 ```
 
 Returns all available text models scraped live from Toolbaz, and live image models from Stable Horde. Cached for 5 minutes per serverless instance.

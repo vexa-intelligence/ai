@@ -1,7 +1,7 @@
 # Health
 
 ```
-GET https://your-domain.pages.dev/health
+GET /health
 ```
 
 Returns live status of Toolbaz (text) and DeepAI (image) upstream services.

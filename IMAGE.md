@@ -5,8 +5,8 @@ Generate images via [DeepAI](https://deepai.org) — free, no API key required.
 All generated images are served through a proxy. The upstream DeepAI URL is never exposed to the client.
 
 ```
-GET  https://your-domain.pages.dev/image
-POST https://your-domain.pages.dev/image
+GET  /image
+POST /image
 ```
 
 ---
@@ -33,10 +33,10 @@ POST https://your-domain.pages.dev/image
 
 ```bash
 # Basic
-curl "https://your-domain.pages.dev/image?q=a+sunset+over+mountains"
+curl "/image?q=a+sunset+over+mountains"
 
 # With quality preference
-curl "https://your-domain.pages.dev/image?q=a+portrait+of+a+knight&preference=quality"
+curl "/image?q=a+portrait+of+a+knight&preference=quality"
 ```
 
 ---
@@ -44,7 +44,7 @@ curl "https://your-domain.pages.dev/image?q=a+portrait+of+a+knight&preference=qu
 ## POST
 
 ```bash
-curl -X POST https://your-domain.pages.dev/image \
+curl -X POST /image \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "a highly detailed fantasy castle on a cliff at sunset",
@@ -62,7 +62,7 @@ curl -X POST https://your-domain.pages.dev/image \
   "prompt": "a sunset over mountains",
   "model": "hd",
   "preference": "speed",
-  "proxy_url": "https://your-domain.pages.dev/image/proxy/abc123def456",
+  "proxy_url": "/image/proxy/abc123def456",
   "elapsed_ms": 4200
 }
 ```
@@ -81,11 +81,11 @@ curl -X POST https://your-domain.pages.dev/image \
 ## Displaying Images
 
 ```html
-<img src="https://your-domain.pages.dev/image/proxy/abc123def456">
+<img src="/image/proxy/abc123def456">
 ```
 
 ```js
-const res = await fetch('https://your-domain.pages.dev/image', {
+const res = await fetch('/image', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ prompt: 'a mountain lake at sunrise'})

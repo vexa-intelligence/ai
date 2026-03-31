@@ -3,7 +3,7 @@
 Multi-turn conversation endpoint. Accepts an OpenAI-style `messages` array and handles all context concatenation server-side.
 
 ```
-POST https://your-domain.pages.dev/chat
+POST /chat
 ```
 
 GET requests to `/chat` return a `405` with usage instructions rather than an error, explaining how to call the endpoint correctly.
@@ -13,7 +13,7 @@ GET requests to `/chat` return a `405` with usage instructions rather than an er
 ## Request
 
 ```bash
-curl -X POST https://your-domain.pages.dev/chat \\
+curl -X POST /chat \\
   -H "Content-Type: application/json" \\
   -d '{
     "model": "toolbaz-v4.5-fast",
@@ -82,7 +82,7 @@ const history = [{ role: 'system', content: 'You are a concise assistant.' }];
 
 async function chat(msg, model = 'toolbaz-v4.5-fast') {
   history.push({ role: 'user', content: msg });
-  const res = await fetch('https://your-domain.pages.dev/chat', {
+  const res = await fetch('/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ model, messages: history })
@@ -102,7 +102,7 @@ history = [{'role': 'system', 'content': 'You are a concise assistant.'}]
 
 def chat(msg, model='toolbaz-v4.5-fast'):
     history.append({'role': 'user', 'content': msg})
-    r = requests.post('https://your-domain.pages.dev/chat', json={'model': model, 'messages': history})
+    r = requests.post('/chat', json={'model': model, 'messages': history})
     reply = r.json()['message']['content']
     history.append({'role': 'assistant', 'content': reply})
     return reply
