@@ -2,6 +2,7 @@ const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 const PAGE_URL = "https://toolbaz.com/writer/chat-gpt-alternative";
 const TOKEN_URL = "https://data.toolbaz.com/token.php";
 const WRITE_URL = "https://data.toolbaz.com/writing.php";
+const DEEPAI_API = "https://api.deepai.org";
 const POST_HDRS = {
   "User-Agent": UA,
   "Referer": PAGE_URL,
@@ -17,7 +18,7 @@ const RATE_WINDOW = 60000;
 const MAX_RETRIES = 3;
 const BACKOFF_BASE = 1.5;
 const MODELS_CACHE_TTL = 300000;
-const DEFAULT_MODEL = "toolbaz-v4.5-fast";
+const DEFAULT_MODEL = "vexa";
 
 const rateLimitStore = new Map();
 const modelsCache = { keys: new Set(), default: DEFAULT_MODEL, ts: 0 };
@@ -41,6 +42,34 @@ function buildFingerprint() {
   return randomString(6) + b64;
 }
 
+function generateDeepAIKey() {
+  const rand = String(Math.round(Math.random() * 100_000_000_000));
+  const salt = "hackers_become_a_little_stinkier_every_time_they_hack";
+  async function md5(text) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(text);
+    const hashBuffer = await crypto.subtle.digest("MD5", data);
+    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+  return { rand, salt };
+}
+
+async function md5Hash(text) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const hashBuffer = await crypto.subtle.digest("MD5", data);
+  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function generateTryitKey() {
+  const rand = String(Math.round(Math.random() * 100_000_000_000));
+  const salt = "hackers_become_a_little_stinkier_every_time_they_hack";
+  const inner = await md5Hash(UA + rand + salt);
+  const middle = await md5Hash(UA + inner);
+  const outer = await md5Hash(UA + middle);
+  return `tryit-${rand}-${outer}`;
+}
+
 async function refreshModels() {
   const now = Date.now();
   if (modelsCache.keys.size > 0 && now - modelsCache.ts < MODELS_CACHE_TTL) return;
@@ -58,7 +87,8 @@ async function refreshModels() {
     }
     if (keys.length) {
       modelsCache.keys = new Set(keys);
-      modelsCache.default = modelsCache.keys.has(DEFAULT_MODEL) ? DEFAULT_MODEL : keys[0];
+      modelsCache.keys.add("vexa");
+      modelsCache.default = DEFAULT_MODEL;
       modelsCache.ts = now;
     }
   } catch (_) { }
@@ -99,7 +129,38 @@ function parseFull(raw) {
   return raw.replace(/<[^>]+>/g, "").trim();
 }
 
+async function fetchVexa(prompt) {
+  const apiKey = await generateTryitKey();
+  const sessionUuid = crypto.randomUUID ? crypto.randomUUID() : randomString(36);
+  const chatHistory = JSON.stringify([{ role: "user", content: prompt }]);
+  const formData = new URLSearchParams({
+    chat_style: "chat",
+    chatHistory,
+    model: "standard",
+    session_uuid: sessionUuid,
+    hacker_is_stinky: "very_stinky",
+    enabled_tools: JSON.stringify(["image_generator", "image_editor"]),
+  });
+  const resp = await fetch(`${DEEPAI_API}/hacking_is_a_serious_crime`, {
+    method: "POST",
+    headers: {
+      "api-key": apiKey,
+      "User-Agent": UA,
+      "Referer": "https://deepai.org/",
+      "Origin": "https://deepai.org",
+      "Accept": "text/plain, */*",
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: formData.toString(),
+  });
+  if (!resp.ok) throw new Error(`DeepAI error ${resp.status}`);
+  const text = await resp.text();
+  const separator = "\u001c";
+  return text.includes(separator) ? text.split(separator)[0].trim() : text.trim();
+}
+
 async function fetchUpstream(prompt, model) {
+  if (model === "vexa") return fetchVexa(prompt);
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     const sid = randomString(32);
     const tokenBody = new URLSearchParams({ session_id: sid, token: buildFingerprint() });
@@ -142,14 +203,14 @@ async function run(prompt, model, ip) {
     return Response.json({ success: false, error: `Prompt exceeds maximum length of ${MAX_PROMPT_LENGTH} characters` }, { status: 400, headers: corsHeaders() });
   }
   await refreshModels();
-  if (!model) model = modelsCache.default;
-  if (modelsCache.keys.size > 0 && !modelsCache.keys.has(model)) {
+  if (!model) model = DEFAULT_MODEL;
+  if (model !== "vexa" && modelsCache.keys.size > 0 && !modelsCache.keys.has(model)) {
     return Response.json({ success: false, error: `Unknown model '${model}'`, valid_models: [...modelsCache.keys].sort() }, { status: 400, headers: corsHeaders() });
   }
   const t0 = Date.now();
   try {
     const raw = await fetchUpstream(prompt, model);
-    const text = parseFull(raw);
+    const text = model === "vexa" ? raw : parseFull(raw);
     return Response.json({ success: true, response: text, model, elapsed_ms: Date.now() - t0 }, { status: 200, headers: corsHeaders() });
   } catch (_) {
     return Response.json({ success: false, error: "Upstream request failed" }, { status: 502, headers: corsHeaders() });

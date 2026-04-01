@@ -1,7 +1,7 @@
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 const TOOLBAZ_PAGE_URL = "https://toolbaz.com/writer/chat-gpt-alternative";
 const CACHE_TTL = 300000;
-const DEFAULT_TEXT_MODEL = "toolbaz-v4.5-fast";
+const DEFAULT_TEXT_MODEL = "vexa";
 
 const IMAGE_MODELS = [
     { name: "hd", label: "HD", description: "Standard HD generation" },
@@ -15,7 +15,7 @@ function unescapeHtml(str) {
 
 function scrapeTextModels(html) {
     const selectMatch = html.match(/<select[^>]*\bname=["']?model["']?[^>]*>([\s\S]*?)(?:<\/select>|$)/i);
-    if (!selectMatch) return [{}, DEFAULT_TEXT_MODEL];
+    if (!selectMatch) return [{ vexa: { label: "Vexa", provider: "DeepAI", speed: 0, quality: 0 } }, DEFAULT_TEXT_MODEL];
     const block = selectMatch[1];
 
     const valueToLabel = {};
@@ -54,20 +54,20 @@ function scrapeTextModels(html) {
     });
 
     const models = {};
+    models["vexa"] = { label: "Vexa", provider: "DeepAI", speed: 0, quality: 0 };
     for (const val of keys) {
         models[val] = { label: valueToLabel[val] || val, provider: providerMap[val] || "", speed: speedMap[val] || 0, quality: qualityMap[val] || 0 };
     }
-    const def = models[DEFAULT_TEXT_MODEL] ? DEFAULT_TEXT_MODEL : (keys[0] || DEFAULT_TEXT_MODEL);
-    return [models, def];
+    return [models, DEFAULT_TEXT_MODEL];
 }
 
 async function fetchTextModels() {
     try {
         const r = await fetch(TOOLBAZ_PAGE_URL, { headers: { "User-Agent": UA } });
-        if (!r.ok) return [{}, DEFAULT_TEXT_MODEL];
+        if (!r.ok) return [{ vexa: { label: "Vexa", provider: "DeepAI", speed: 0, quality: 0 } }, DEFAULT_TEXT_MODEL];
         const html = await r.text();
         return scrapeTextModels(html);
-    } catch (_) { return [{}, DEFAULT_TEXT_MODEL]; }
+    } catch (_) { return [{ vexa: { label: "Vexa", provider: "DeepAI", speed: 0, quality: 0 } }, DEFAULT_TEXT_MODEL]; }
 }
 
 async function refresh() {

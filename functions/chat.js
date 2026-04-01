@@ -2,6 +2,7 @@ const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 const TOOLBAZ_PAGE_URL = "https://toolbaz.com/writer/chat-gpt-alternative";
 const TOKEN_URL = "https://data.toolbaz.com/token.php";
 const WRITE_URL = "https://data.toolbaz.com/writing.php";
+const DEEPAI_API = "https://api.deepai.org";
 const SESSION_ID = "yz3SJSGvR1ih8w5vfOmk9Fpd87iSGfUos54s";
 const HDRS = {
     "Referer": TOOLBAZ_PAGE_URL,
@@ -15,7 +16,7 @@ const MAX_PROMPT_LENGTH = 16000;
 const MAX_REQUESTS = 20;
 const RATE_WINDOW = 60000;
 const MODELS_CACHE_TTL = 300000;
-const DEFAULT_MODEL = "toolbaz-v4.5-fast";
+const DEFAULT_MODEL = "vexa";
 
 const rateLimitStore = new Map();
 const modelsCache = { models: new Set(), ts: 0 };
@@ -39,17 +40,34 @@ function makeClientToken() {
     return randomString(6) + b64;
 }
 
+async function md5Hash(text) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(text);
+    const hashBuffer = await crypto.subtle.digest("MD5", data);
+    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function generateTryitKey() {
+    const rand = String(Math.round(Math.random() * 100_000_000_000));
+    const salt = "hackers_become_a_little_stinkier_every_time_they_hack";
+    const inner = await md5Hash(UA + rand + salt);
+    const middle = await md5Hash(UA + inner);
+    const outer = await md5Hash(UA + middle);
+    return `tryit-${rand}-${outer}`;
+}
+
 async function getValidModels() {
     const now = Date.now();
     if (modelsCache.models.size > 0 && now - modelsCache.ts < MODELS_CACHE_TTL) return modelsCache.models;
     try {
         const r = await fetch(TOOLBAZ_PAGE_URL, { headers: { "User-Agent": UA } });
-        if (!r.ok) return modelsCache.models.size ? modelsCache.models : new Set([DEFAULT_MODEL]);
+        if (!r.ok) return modelsCache.models.size ? modelsCache.models : new Set(["vexa", "toolbaz-v4.5-fast"]);
         const html = await r.text();
         const selectMatch = html.match(/<select[^>]*\bname=["']?model["']?[^>]*>([\s\S]*?)(?:<\/select>|$)/i);
-        if (!selectMatch) return modelsCache.models.size ? modelsCache.models : new Set([DEFAULT_MODEL]);
+        if (!selectMatch) return modelsCache.models.size ? modelsCache.models : new Set(["vexa", "toolbaz-v4.5-fast"]);
         const models = new Set();
-        const seen = new Set();
+        models.add("vexa");
+        const seen = new Set(["vexa"]);
         for (const m of selectMatch[1].matchAll(/<option[^>]*\bvalue=["']?([^"'>\s]+)["']?/gi)) {
             const val = m[1].trim();
             if (val && !seen.has(val)) { seen.add(val); models.add(val); }
@@ -60,7 +78,37 @@ async function getValidModels() {
             return models;
         }
     } catch (_) { }
-    return modelsCache.models.size ? modelsCache.models : new Set([DEFAULT_MODEL]);
+    return modelsCache.models.size ? modelsCache.models : new Set(["vexa", "toolbaz-v4.5-fast"]);
+}
+
+async function vexaComplete(prompt) {
+    const apiKey = await generateTryitKey();
+    const sessionUuid = crypto.randomUUID ? crypto.randomUUID() : randomString(36);
+    const chatHistory = JSON.stringify([{ role: "user", content: prompt }]);
+    const formData = new URLSearchParams({
+        chat_style: "chat",
+        chatHistory,
+        model: "standard",
+        session_uuid: sessionUuid,
+        hacker_is_stinky: "very_stinky",
+        enabled_tools: JSON.stringify(["image_generator", "image_editor"]),
+    });
+    const resp = await fetch(`${DEEPAI_API}/hacking_is_a_serious_crime`, {
+        method: "POST",
+        headers: {
+            "api-key": apiKey,
+            "User-Agent": UA,
+            "Referer": "https://deepai.org/",
+            "Origin": "https://deepai.org",
+            "Accept": "text/plain, */*",
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData.toString(),
+    });
+    if (!resp.ok) throw new Error(`DeepAI error ${resp.status}`);
+    const text = await resp.text();
+    const separator = "\u001c";
+    return text.includes(separator) ? text.split(separator)[0].trim() : text.trim();
 }
 
 async function toolbazComplete(prompt, model) {
@@ -130,7 +178,7 @@ export async function onRequest({ request }) {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: {
-                    model: "toolbaz-v4.5-fast",
+                    model: "vexa",
                     messages: [
                         { role: "system", content: "You are a helpful assistant." },
                         { role: "user", content: "Your message here" },
@@ -175,7 +223,7 @@ export async function onRequest({ request }) {
     const prompt = messagesToPrompt(messages);
     const t0 = Date.now();
     try {
-        const text = await toolbazComplete(prompt, model);
+        const text = model === "vexa" ? await vexaComplete(prompt) : await toolbazComplete(prompt, model);
         return Response.json({
             success: true,
             message: { role: "assistant", content: text },
