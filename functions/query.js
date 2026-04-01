@@ -17,18 +17,10 @@ const RATE_WINDOW = 60000;
 const MAX_RETRIES = 3;
 const BACKOFF_BASE = 1.5;
 const MODELS_CACHE_TTL = 300000;
-const TOKEN_TIMEOUT_MS = 10000;
-const WRITE_TIMEOUT_MS = 30000;
-const DEFAULT_MODEL = "vexa";
-const VEXA_UPSTREAM = "toolbaz-v4.5-fast";
+const DEFAULT_MODEL = "toolbaz-v4.5-fast";
 
 const rateLimitStore = new Map();
 const modelsCache = { keys: new Set(), default: DEFAULT_MODEL, ts: 0 };
-
-function resolveUpstreamModel(model) {
-  if (model === "vexa" || !model) return VEXA_UPSTREAM;
-  return model;
-}
 
 function randomString(n) {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -53,23 +45,20 @@ async function refreshModels() {
   const now = Date.now();
   if (modelsCache.keys.size > 0 && now - modelsCache.ts < MODELS_CACHE_TTL) return;
   try {
-    const r = await fetch(PAGE_URL, {
-      headers: { "User-Agent": UA, "Accept-Language": "en-US,en;q=0.9" },
-      signal: AbortSignal.timeout(10000),
-    });
+    const r = await fetch(PAGE_URL, { headers: { "User-Agent": UA, "Accept-Language": "en-US,en;q=0.9" } });
     if (!r.ok) return;
     const html = await r.text();
     const selectMatch = html.match(/<select[^>]*\bname=["']?model["']?[^>]*>([\s\S]*?)(?:<\/select>|$)/i);
     if (!selectMatch) return;
-    const keys = [DEFAULT_MODEL];
-    const seen = new Set([DEFAULT_MODEL, VEXA_UPSTREAM]);
+    const keys = [];
+    const seen = new Set();
     for (const m of selectMatch[1].matchAll(/<option[^>]*\bvalue=["']?([^"'>\s]+)["']?/gi)) {
       const k = m[1].trim();
       if (k && !seen.has(k)) { keys.push(k); seen.add(k); }
     }
     if (keys.length) {
       modelsCache.keys = new Set(keys);
-      modelsCache.default = DEFAULT_MODEL;
+      modelsCache.default = modelsCache.keys.has(DEFAULT_MODEL) ? DEFAULT_MODEL : keys[0];
       modelsCache.ts = now;
     }
   } catch (_) { }
@@ -111,41 +100,20 @@ function parseFull(raw) {
 }
 
 async function fetchUpstream(prompt, model) {
-  const upstreamModel = resolveUpstreamModel(model);
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     const sid = randomString(32);
     const tokenBody = new URLSearchParams({ session_id: sid, token: buildFingerprint() });
-    let tr;
-    try {
-      tr = await fetch(TOKEN_URL, {
-        method: "POST",
-        headers: POST_HDRS,
-        body: tokenBody.toString(),
-        signal: AbortSignal.timeout(TOKEN_TIMEOUT_MS),
-      });
-    } catch (e) {
-      if (attempt === MAX_RETRIES - 1) throw new Error(`Token request timed out or failed: ${e.message}`);
-      await new Promise(res => setTimeout(res, Math.pow(BACKOFF_BASE, attempt) * 1000));
-      continue;
-    }
+    const tr = await fetch(TOKEN_URL, { method: "POST", headers: POST_HDRS, body: tokenBody.toString() });
     if (!tr.ok) throw new Error(`Token request failed: ${tr.status}`);
     const tj = await tr.json();
     const token = tj.token || "";
     if (!token) throw new Error("Token endpoint returned no token");
-    const writeBody = new URLSearchParams({ text: prompt, capcha: token, model: upstreamModel, session_id: sid });
-    let wr;
-    try {
-      wr = await fetch(WRITE_URL, {
-        method: "POST",
-        headers: { ...POST_HDRS, Accept: "text/event-stream, application/json, */*" },
-        body: writeBody.toString(),
-        signal: AbortSignal.timeout(WRITE_TIMEOUT_MS),
-      });
-    } catch (e) {
-      if (attempt === MAX_RETRIES - 1) throw new Error(`Write request timed out or failed: ${e.message}`);
-      await new Promise(res => setTimeout(res, Math.pow(BACKOFF_BASE, attempt) * 1000));
-      continue;
-    }
+    const writeBody = new URLSearchParams({ text: prompt, capcha: token, model, session_id: sid });
+    const wr = await fetch(WRITE_URL, {
+      method: "POST",
+      headers: { ...POST_HDRS, Accept: "text/event-stream, application/json, */*" },
+      body: writeBody.toString(),
+    });
     if (wr.ok) return await wr.text();
     if (wr.status < 500) throw new Error(`Upstream error ${wr.status}`);
     if (attempt === MAX_RETRIES - 1) throw new Error(`Upstream server error ${wr.status}`);
@@ -174,20 +142,17 @@ async function run(prompt, model, ip) {
     return Response.json({ success: false, error: `Prompt exceeds maximum length of ${MAX_PROMPT_LENGTH} characters` }, { status: 400, headers: corsHeaders() });
   }
   await refreshModels();
-  if (!model) model = DEFAULT_MODEL;
-  if (modelsCache.keys.size > 0 && model !== DEFAULT_MODEL && !modelsCache.keys.has(model)) {
+  if (!model) model = modelsCache.default;
+  if (modelsCache.keys.size > 0 && !modelsCache.keys.has(model)) {
     return Response.json({ success: false, error: `Unknown model '${model}'`, valid_models: [...modelsCache.keys].sort() }, { status: 400, headers: corsHeaders() });
   }
   const t0 = Date.now();
   try {
     const raw = await fetchUpstream(prompt, model);
     const text = parseFull(raw);
-    if (!text) {
-      return Response.json({ success: false, error: "Upstream returned an empty response" }, { status: 502, headers: corsHeaders() });
-    }
     return Response.json({ success: true, response: text, model, elapsed_ms: Date.now() - t0 }, { status: 200, headers: corsHeaders() });
-  } catch (e) {
-    return Response.json({ success: false, error: `Upstream request failed: ${e.message}` }, { status: 502, headers: corsHeaders() });
+  } catch (_) {
+    return Response.json({ success: false, error: "Upstream request failed" }, { status: 502, headers: corsHeaders() });
   }
 }
 
@@ -199,7 +164,7 @@ export async function onRequest({ request }) {
   if (request.method === "GET") {
     const url = new URL(request.url);
     const prompt = url.searchParams.get("q") || url.searchParams.get("query") || "";
-    const model = url.searchParams.get("model") || DEFAULT_MODEL;
+    const model = url.searchParams.get("model") || "";
     return run(prompt, model, ip);
   }
   if (request.method === "POST") {
@@ -207,7 +172,7 @@ export async function onRequest({ request }) {
     try { body = await request.json(); }
     catch (_) { return Response.json({ success: false, error: "Invalid JSON body" }, { status: 400, headers: corsHeaders() }); }
     const prompt = body.q || body.query || body.prompt || "";
-    const model = body.model || DEFAULT_MODEL;
+    const model = body.model || "";
     return run(prompt, model, ip);
   }
   return Response.json({ success: false, error: "Method not allowed" }, { status: 405, headers: corsHeaders() });

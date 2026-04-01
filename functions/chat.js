@@ -15,16 +15,10 @@ const MAX_PROMPT_LENGTH = 16000;
 const MAX_REQUESTS = 20;
 const RATE_WINDOW = 60000;
 const MODELS_CACHE_TTL = 300000;
-const DEFAULT_MODEL = "vexa";
-const VEXA_UPSTREAM = "toolbaz-v4.5-fast";
+const DEFAULT_MODEL = "toolbaz-v4.5-fast";
 
 const rateLimitStore = new Map();
 const modelsCache = { models: new Set(), ts: 0 };
-
-function resolveUpstreamModel(model) {
-    if (model === "vexa") return VEXA_UPSTREAM;
-    return model;
-}
 
 function randomString(n) {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -54,7 +48,7 @@ async function getValidModels() {
         const html = await r.text();
         const selectMatch = html.match(/<select[^>]*\bname=["']?model["']?[^>]*>([\s\S]*?)(?:<\/select>|$)/i);
         if (!selectMatch) return modelsCache.models.size ? modelsCache.models : new Set([DEFAULT_MODEL]);
-        const models = new Set([DEFAULT_MODEL]);
+        const models = new Set();
         const seen = new Set();
         for (const m of selectMatch[1].matchAll(/<option[^>]*\bvalue=["']?([^"'>\s]+)["']?/gi)) {
             const val = m[1].trim();
@@ -70,7 +64,6 @@ async function getValidModels() {
 }
 
 async function toolbazComplete(prompt, model) {
-    const upstreamModel = resolveUpstreamModel(model);
     const clientToken = makeClientToken();
     const tokenBody = new URLSearchParams({ session_id: SESSION_ID, token: clientToken });
     const tr = await fetch(TOKEN_URL, { method: "POST", headers: HDRS, body: tokenBody.toString() });
@@ -78,7 +71,7 @@ async function toolbazComplete(prompt, model) {
     const tj = await tr.json();
     const capcha = tj.token || "";
     if (!capcha) throw new Error("Failed to obtain capcha token");
-    const writeBody = new URLSearchParams({ text: prompt, capcha, model: upstreamModel, session_id: SESSION_ID });
+    const writeBody = new URLSearchParams({ text: prompt, capcha, model, session_id: SESSION_ID });
     const wr = await fetch(WRITE_URL, {
         method: "POST",
         headers: { ...HDRS, Accept: "text/event-stream,*/*" },
@@ -137,7 +130,7 @@ export async function onRequest({ request }) {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: {
-                    model: "vexa",
+                    model: "toolbaz-v4.5-fast",
                     messages: [
                         { role: "system", content: "You are a helpful assistant." },
                         { role: "user", content: "Your message here" },
