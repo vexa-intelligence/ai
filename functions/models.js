@@ -15,7 +15,7 @@ function unescapeHtml(str) {
 
 function scrapeTextModels(html) {
     const selectMatch = html.match(/<select[^>]*\bname=["']?model["']?[^>]*>([\s\S]*?)(?:<\/select>|$)/i);
-    if (!selectMatch) return [{ vexa: { label: "Vexa", provider: "DeepAI", speed: 0, quality: 0 } }, DEFAULT_TEXT_MODEL];
+    if (!selectMatch) return [{ vexa: { label: "Vexa", provider: "Vexa-AI", speed: 0, quality: 0 } }, DEFAULT_TEXT_MODEL];
     const block = selectMatch[1];
 
     const valueToLabel = {};
@@ -54,7 +54,7 @@ function scrapeTextModels(html) {
     });
 
     const models = {};
-    models["vexa"] = { label: "Vexa", provider: "DeepAI", speed: 0, quality: 0 };
+    models["vexa"] = { label: "Vexa", provider: "Vexa-AI", speed: 0, quality: 0 };
     for (const val of keys) {
         models[val] = { label: valueToLabel[val] || val, provider: providerMap[val] || "", speed: speedMap[val] || 0, quality: qualityMap[val] || 0 };
     }
@@ -64,10 +64,10 @@ function scrapeTextModels(html) {
 async function fetchTextModels() {
     try {
         const r = await fetch(TOOLBAZ_PAGE_URL, { headers: { "User-Agent": UA } });
-        if (!r.ok) return [{ vexa: { label: "Vexa", provider: "DeepAI", speed: 0, quality: 0 } }, DEFAULT_TEXT_MODEL];
+        if (!r.ok) return [{ vexa: { label: "Vexa", provider: "Vexa-AI", speed: 0, quality: 0 } }, DEFAULT_TEXT_MODEL];
         const html = await r.text();
         return scrapeTextModels(html);
-    } catch (_) { return [{ vexa: { label: "Vexa", provider: "DeepAI", speed: 0, quality: 0 } }, DEFAULT_TEXT_MODEL]; }
+    } catch (_) { return [{ vexa: { label: "Vexa", provider: "Vexa-AI", speed: 0, quality: 0 } }, DEFAULT_TEXT_MODEL]; }
 }
 
 async function refresh() {
