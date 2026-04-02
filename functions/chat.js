@@ -21,6 +21,53 @@ const DEFAULT_MODEL = "vexa";
 const rateLimitStore = new Map();
 const modelsCache = { models: new Set(), ts: 0 };
 
+const AIFREE_NONCE_URL = "https://aifreeforever.com/api/chat-nonce";
+const AIFREE_ANSWER_URL = "https://aifreeforever.com/api/generate-ai-answer";
+
+async function getAiFreeNonce() {
+    const r = await fetch(AIFREE_NONCE_URL, {
+        method: "GET",
+        headers: { "Referer": "https://aifreeforever.com/", "Origin": "https://aifreeforever.com", "User-Agent": UA },
+    });
+    if (!r.ok) throw new Error(`Nonce fetch failed: ${r.status}`);
+    const j = await r.json();
+    return j.nonce || j.data?.nonce || Object.values(j)[0];
+}
+
+async function aiFreeComplete(prompt, messages, model) {
+    const nonce = await getAiFreeNonce();
+    const history = messages.slice(0, -1).map(m => ({ role: m.role, content: m.content }));
+    const body = {
+        question: prompt,
+        tone: "friendly",
+        format: "paragraph",
+        file: null,
+        conversationHistory: history,
+        aiName: "",
+        aiRole: "assistant",
+        interactionProof: {
+            nonce,
+            keystrokeCount: Math.floor(prompt.length * 0.8 + Math.random() * 5),
+            typingDuration: Math.floor(prompt.length * 120 + Math.random() * 1000),
+            mouseMovements: Math.floor(Math.random() * 20 + 5),
+        },
+        model,
+    };
+    const r = await fetch(AIFREE_ANSWER_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Referer": "https://aifreeforever.com/",
+            "Origin": "https://aifreeforever.com",
+            "User-Agent": UA,
+        },
+        body: JSON.stringify(body),
+    });
+    if (!r.ok) throw new Error(`AIFree error ${r.status}`);
+    const j = await r.json();
+    return j.answer || j.response || j.data?.answer || j.data?.response || JSON.stringify(j);
+}
+
 function randomString(n) {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     let s = "";
@@ -38,13 +85,6 @@ function makeClientToken() {
     };
     const b64 = btoa(JSON.stringify(obj));
     return randomString(6) + b64;
-}
-
-async function md5Hash(text) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(text);
-    const hashBuffer = await crypto.subtle.digest("MD5", data);
-    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
 function generateTryitKey() {
@@ -108,6 +148,9 @@ async function getValidModels() {
         if (!selectMatch) return modelsCache.models.size ? modelsCache.models : new Set(["vexa", "toolbaz-v4.5-fast"]);
         const models = new Set();
         models.add("vexa");
+        models.add("gemini-2.5-flash-lite");
+        models.add("gpt-4.1-nano");
+        models.add("deepseek-v3.2");
         const seen = new Set(["vexa"]);
         for (const m of selectMatch[1].matchAll(/<option[^>]*\bvalue=["']?([^"'>\s]+)["']?/gi)) {
             const val = m[1].trim();
@@ -122,8 +165,8 @@ async function getValidModels() {
     return modelsCache.models.size ? modelsCache.models : new Set(["vexa", "toolbaz-v4.5-fast"]);
 }
 
-async function vexaComplete(prompt, messages) {
-    const apiKey = await generateTryitKey();
+async function vexaComplete(prompt, messages, model = "standard") {
+    const apiKey = generateTryitKey();
     const sessionUuid = crypto.randomUUID ? crypto.randomUUID() : randomString(36);
     const chatHistory = JSON.stringify(
         messages.map(m => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content }))
@@ -131,7 +174,7 @@ async function vexaComplete(prompt, messages) {
     const formData = new URLSearchParams({
         chat_style: "chat",
         chatHistory,
-        model: "standard",
+        model,
         session_uuid: sessionUuid,
         hacker_is_stinky: "very_stinky",
         enabled_tools: JSON.stringify(["image_generator", "image_editor"]),
@@ -156,10 +199,7 @@ async function vexaComplete(prompt, messages) {
         const { done, value } = await reader.read();
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
-        if (chunk.includes("\u001c")) {
-            full += chunk.split("\u001c")[0];
-            break;
-        }
+        if (chunk.includes("\u001c")) { full += chunk.split("\u001c")[0]; break; }
         full += chunk;
     }
     return full.trim();
@@ -279,7 +319,13 @@ export async function onRequest({ request }) {
     if (!validModels.has(model)) model = DEFAULT_MODEL;
     const t0 = Date.now();
     try {
-        const text = model === "vexa" ? await vexaComplete(prompt, messages) : await toolbazComplete(prompt, model);
+        const DEEPAI_MODELS = new Set(["vexa", "gemini-2.5-flash-lite", "gpt-4.1-nano", "deepseek-v3.2"]);
+        const deepaiModel = model === "vexa" ? "standard" : model;
+        const text = DEEPAI_MODELS.has(model)
+            ? await vexaComplete(prompt, messages, deepaiModel)
+            : model === "gpt-5"
+                ? await aiFreeComplete(lastUserMsg, messages, model)
+                : await toolbazComplete(prompt, model);
         return Response.json({
             success: true,
             message: { role: "assistant", content: text },

@@ -53,9 +53,15 @@ function scrapeTextModels(html) {
         if (qlt) qualityMap[val] = parseInt(qlt[1]);
     });
 
+    const BLACKLIST = new Set(["gpt-5", "gemini-2.5-flash-lite", "gpt-4.1-nano", "deepseek-v3.2"]);
+
     const models = {};
     models["vexa"] = { label: "Vexa", provider: "Vexa-AI", speed: 0, quality: 0 };
+    models["gemini-2.5-flash-lite"] = { label: "Gemini-2.5-Flash-Lite", provider: "Google", speed: 180, quality: 72 };
+    models["gpt-4.1-nano"] = { label: "GPT-4.1-Nano", provider: "OpenAI", speed: 320, quality: 70 };
+    models["deepseek-v3.2"] = { label: "DeepSeek-V3.2", provider: "DeepSeek", speed: 280, quality: 81 };
     for (const val of keys) {
+        if (BLACKLIST.has(val)) continue;
         models[val] = { label: valueToLabel[val] || val, provider: providerMap[val] || "", speed: speedMap[val] || 0, quality: qualityMap[val] || 0 };
     }
     return [models, DEFAULT_TEXT_MODEL];

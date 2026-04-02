@@ -42,24 +42,53 @@ function buildFingerprint() {
   return randomString(6) + b64;
 }
 
-function generateDeepAIKey() {
-  const rand = String(Math.round(Math.random() * 100_000_000_000));
-  const salt = "hackers_become_a_little_stinkier_every_time_they_hack";
-  async function md5(text) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(text);
-    const hashBuffer = await crypto.subtle.digest("MD5", data);
-    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
-  }
-  return { rand, salt };
+const AIFREE_NONCE_URL = "https://aifreeforever.com/api/chat-nonce";
+const AIFREE_ANSWER_URL = "https://aifreeforever.com/api/generate-ai-answer";
+
+async function getAiFreeNonce() {
+  const r = await fetch(AIFREE_NONCE_URL, {
+    method: "GET",
+    headers: { "Referer": "https://aifreeforever.com/", "Origin": "https://aifreeforever.com", "User-Agent": UA },
+  });
+  if (!r.ok) throw new Error(`Nonce fetch failed: ${r.status}`);
+  const j = await r.json();
+  return j.nonce || j.data?.nonce || Object.values(j)[0];
 }
 
-async function md5Hash(text) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(text);
-  const hashBuffer = await crypto.subtle.digest("MD5", data);
-  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+async function aiFreeComplete(prompt, messages, model) {
+  const nonce = await getAiFreeNonce();
+  const history = messages.slice(0, -1).map(m => ({ role: m.role, content: m.content }));
+  const body = {
+    question: prompt,
+    tone: "friendly",
+    format: "paragraph",
+    file: null,
+    conversationHistory: history,
+    aiName: "",
+    aiRole: "assistant",
+    interactionProof: {
+      nonce,
+      keystrokeCount: Math.floor(prompt.length * 0.8 + Math.random() * 5),
+      typingDuration: Math.floor(prompt.length * 120 + Math.random() * 1000),
+      mouseMovements: Math.floor(Math.random() * 20 + 5),
+    },
+    model,
+  };
+  const r = await fetch(AIFREE_ANSWER_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Referer": "https://aifreeforever.com/",
+      "Origin": "https://aifreeforever.com",
+      "User-Agent": UA,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error(`AIFree error ${r.status}`);
+  const j = await r.json();
+  return j.answer || j.response || j.data?.answer || j.data?.response || JSON.stringify(j);
 }
+
 
 function generateTryitKey() {
   const r = String(Math.round(Math.random() * 100_000_000_000));
@@ -127,8 +156,11 @@ async function refreshModels() {
       if (k && !seen.has(k)) { keys.push(k); seen.add(k); }
     }
     if (keys.length) {
-      modelsCache.keys = new Set(keys);
+      modelsCache.keys = new Set(["vexa", "gemini-2.5-flash-lite", "gpt-4.1-nano", "deepseek-v3.2"]);
       modelsCache.keys.add("vexa");
+      modelsCache.keys.add("gemini-2.5-flash-lite");
+      modelsCache.keys.add("gpt-4.1-nano");
+      modelsCache.keys.add("deepseek-v3.2");
       modelsCache.default = DEFAULT_MODEL;
       modelsCache.ts = now;
     }
@@ -170,14 +202,14 @@ function parseFull(raw) {
   return raw.replace(/<[^>]+>/g, "").trim();
 }
 
-async function fetchVexa(prompt) {
-  const apiKey = await generateTryitKey();
+async function fetchVexa(prompt, model = "standard") {
+  const apiKey = generateTryitKey();
   const sessionUuid = crypto.randomUUID ? crypto.randomUUID() : randomString(36);
   const chatHistory = JSON.stringify([{ role: "user", content: prompt }]);
   const formData = new URLSearchParams({
     chat_style: "chat",
     chatHistory,
-    model: "standard",
+    model,
     session_uuid: sessionUuid,
     hacker_is_stinky: "very_stinky",
     enabled_tools: JSON.stringify(["image_generator", "image_editor"]),
@@ -202,10 +234,7 @@ async function fetchVexa(prompt) {
     const { done, value } = await reader.read();
     if (done) break;
     const chunk = decoder.decode(value, { stream: true });
-    if (chunk.includes("\u001c")) {
-      full += chunk.split("\u001c")[0];
-      break;
-    }
+    if (chunk.includes("\u001c")) { full += chunk.split("\u001c")[0]; break; }
     full += chunk;
   }
   return full.trim();
@@ -268,9 +297,16 @@ async function run(prompt, model, ip) {
   }
   const t0 = Date.now();
   try {
-    const raw = await fetchUpstream(prompt, model);
-    const text = model === "vexa" ? raw : parseFull(raw);
-    return Response.json({ success: true, response: text, model, elapsed_ms: Date.now() - t0 }, { status: 200, headers: corsHeaders() });
+    const DEEPAI_MODELS = new Set(["vexa", "gemini-2.5-flash-lite", "gpt-4.1-nano", "deepseek-v3.2"]);
+    const deepaiModel = model === "vexa" ? "standard" : model;
+    const raw = DEEPAI_MODELS.has(model)
+      ? await fetchVexa(prompt, deepaiModel)
+      : model === "gpt-5"
+        ? await aiFreeComplete(prompt, [{ role: "user", content: prompt }], model)
+        : await fetchUpstream(prompt, model);
+    const text = DEEPAI_MODELS.has(model) || model === "gpt-5" ? raw : parseFull(raw);
+    const source = DEEPAI_MODELS.has(model) ? "deepai.org" : model === "gpt-5" ? "aifreeforever.com" : "toolbaz.com";
+    return Response.json({ success: true, response: text, model, elapsed_ms: Date.now() - t0, source }, { status: 200, headers: corsHeaders() });
   } catch (_) {
     return Response.json({ success: false, error: "Upstream request failed" }, { status: 502, headers: corsHeaders() });
   }
