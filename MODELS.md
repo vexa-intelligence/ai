@@ -56,16 +56,15 @@ Use `GET /models` to discover what's currently available. The model list changes
 
 ## Image Models
 
-Fetched live from Vexa Image Model workers endpoint, filtered to online workers only, ranked by worker count descending. Top 30 returned.
-
-If the workers endpoint fails, falls back to the Vexa Image Model model reference API.
+A static list of available image models. Currently one model is available.
 
 Pass the exact `name` to `/image?model=` or the `model` POST body field.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `name` | string | Exact model name to pass to `/image` |
-| `count` | number | Active workers right now (0 if sourced from fallback reference) |
+| `label` | string | Display name |
+| `description` | string | Short description of the model |
 
 ---
 
@@ -73,8 +72,4 @@ Pass the exact `name` to `/image?model=` or the `model` POST body field.
 
 Both lists cached for **5 minutes** per serverless instance.
 
-If upstream is unreachable, falls back to last successful cache or empty defaults:
-
-```json
-{ "success": true, "default": "vexa", "models": {}, "image_models": [] }
-```
+If upstream is unreachable, falls back to last successful cache or a minimal default set.

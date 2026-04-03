@@ -88,8 +88,6 @@ print(r.json()['response'])
 |-------|-------|
 | Max prompt length | 4,000 characters |
 | Rate limit | 20 requests / IP / 60s |
-| Upstream timeout | 55s |
-| Retries | 3 with exponential backoff |
 
 ---
 
@@ -99,7 +97,6 @@ print(r.json()['response'])
 |--------|-------|
 | `400` | `Missing required parameter: q, query, or prompt` |
 | `400` | `Prompt exceeds maximum length of 4000 characters` |
-| `400` | `Unknown model 'xyz'` + `valid_models` array |
 | `429` | `Rate limit exceeded. Try again shortly.` |
 | `502` | `Upstream request failed` |
 | `500` | `Internal server error` |

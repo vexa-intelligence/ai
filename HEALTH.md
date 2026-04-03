@@ -32,8 +32,14 @@ Returns live status of Vexa (text) and Vexa Image Model (image) upstream service
       "reachable": true,
       "status_code": 200,
       "latency_ms": 212
+    },
+    "models": {
+      "vexa": { "ok": true, "latency_ms": 340 },
+      "gemini-2.5-flash-lite": { "ok": true, "latency_ms": 410 },
+      "gpt-4.1-nano": { "ok": false, "error": "DeepAI error 429", "latency_ms": 120 }
     }
-  }
+  },
+  "failed_models": ["gpt-4.1-nano"]
 }
 ```
 
@@ -45,3 +51,8 @@ Returns live status of Vexa (text) and Vexa Image Model (image) upstream service
 | `checks.page` | object | Vexa page reachability |
 | `checks.token` | object | Vexa token endpoint |
 | `checks.image` | object | Vexa Image Model endpoint reachability |
+| `checks.models` | object | Per-model live probe results keyed by model ID |
+| `checks.models[id].ok` | boolean | Whether the model responded successfully |
+| `checks.models[id].latency_ms` | number | Round-trip time for this model's probe |
+| `checks.models[id].error` | string | Error message if `ok` is `false` |
+| `failed_models` | array | Model IDs that failed — omitted when all models pass |

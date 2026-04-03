@@ -116,7 +116,6 @@ def chat(msg, model='vexa'):
 |-------|-------|
 | Max total conversation length | 16,000 characters |
 | Rate limit | 20 requests / IP / 60s |
-| Upstream timeout | 30s |
 
 ---
 

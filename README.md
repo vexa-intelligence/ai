@@ -8,7 +8,7 @@ Free REST API for text and image generation. No account, no API key, no setup.
 - **Images** — Vexa Image Model text-to-image, proxied (no direct image URLs exposed)
 
 ```
-BASE_URL = 
+BASE_URL = https://vexa-ai.pages.dev
 ```
 
 ---
@@ -23,7 +23,7 @@ BASE_URL =
 | `POST` | `/chat` | Multi-turn conversation (OpenAI-style messages array) |
 | `GET POST` | `/image` | Generate images |
 | `GET` | `/image/proxy/:id` | Proxied image delivery — never exposes origin URL |
-| `GET` | `/health` | Live status of Vexa Image Model |
+| `GET` | `/health` | Live status of all text models and image upstream |
 
 ---
 
