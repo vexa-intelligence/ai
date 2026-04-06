@@ -19,6 +19,15 @@ const modelsCache = { models: new Set(), ts: 0 };
 const AIFREE_NONCE_URL = "https://aifreeforever.com/api/chat-nonce";
 const AIFREE_ANSWER_URL = "https://aifreeforever.com/api/generate-ai-answer";
 
+const HDRS = {
+  "User-Agent": UA,
+  "Referer": TOOLBAZ_PAGE_URL,
+  "Origin": "https://toolbaz.com",
+  "X-Requested-With": "XMLHttpRequest",
+  "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+  "Accept-Language": "en-US,en;q=0.9",
+};
+
 async function getAiFreeNonce() {
     const r = await fetch(AIFREE_NONCE_URL, {
         method: "GET",
