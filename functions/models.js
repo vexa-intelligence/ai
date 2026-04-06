@@ -9,6 +9,7 @@ const POLLINATIONS_MODELS_LIST = [
 ];
 
 const IMAGE_MODELS = [
+    { name: "hd", label: "HD", description: "Standard HD generation — DeepAI" },
     { name: "flux", label: "Flux", description: "Fast, high quality — default" },
     { name: "turbo", label: "Flux Turbo", description: "Fastest generation" },
     { name: "kontext", label: "Flux Kontext", description: "Instruction-following edits" },
