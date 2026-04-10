@@ -51,11 +51,6 @@ const endpointsData = {
             GET: "/health"
         }
     },
-    limits: {
-        chat: "20 rpm / 16k chars",
-        image: "10 rpm",
-        query: "20 rpm / 4k chars"
-    },
     responses: {
         ok: { success: true },
         error: { success: false, error: "message" }

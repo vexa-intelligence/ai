@@ -72,14 +72,6 @@ curl "/health"
 
 ---
 
-## Rate Limits
-
-| Endpoint | Limit |
-|----------|-------|
-| `/query` | 20 requests / IP / 60s |
-| `/chat` | 20 requests / IP / 60s |
-| `/image` | 10 requests / IP / 60s |
-
 In-memory per serverless instance, resets on cold starts.
 
 ---

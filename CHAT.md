@@ -117,15 +117,6 @@ def chat(msg, model='vexa'):
 
 ---
 
-## Limits
-
-| Limit | Value |
-|-------|-------|
-| Max total conversation length | 16,000 characters |
-| Rate limit | 20 requests / IP / 60s |
-
----
-
 ## Errors
 
 | Status | Error |

@@ -92,15 +92,6 @@ print(r.json()['response'])
 
 ---
 
-## Limits
-
-| Limit | Value |
-|-------|-------|
-| Max prompt length | 4,000 characters |
-| Rate limit | 20 requests / IP / 60s |
-
----
-
 ## Errors
 
 | Status | Error |

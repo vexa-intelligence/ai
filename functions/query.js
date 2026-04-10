@@ -15,15 +15,10 @@ const POST_HDRS = {
   "Accept-Language": "en-US,en;q=0.9",
 };
 
-const MAX_PROMPT_LENGTH = 4000;
-const MAX_REQUESTS = 20;
-const RATE_WINDOW = 60000;
 const MAX_RETRIES = 3;
 const BACKOFF_BASE = 1.5;
 const MODELS_CACHE_TTL = 300000;
 const DEFAULT_MODEL = "vexa";
-
-const rateLimitStore = new Map();
 const modelsCache = { keys: new Set(), default: DEFAULT_MODEL, ts: 0 };
 
 function randomString(n) {
@@ -166,16 +161,6 @@ async function refreshModels() {
   } catch (_) { }
 }
 
-function isRateLimited(ip) {
-  const now = Date.now();
-  if (!rateLimitStore.has(ip)) rateLimitStore.set(ip, []);
-  const times = rateLimitStore.get(ip).filter(t => now - t < RATE_WINDOW);
-  rateLimitStore.set(ip, times);
-  if (times.length >= MAX_REQUESTS) return true;
-  times.push(now);
-  return false;
-}
-
 function parseChunk(chunk) {
   chunk = chunk.trim();
   if (!chunk || chunk === "[DONE]") return "";
@@ -310,16 +295,10 @@ function corsHeaders() {
 }
 
 async function run(prompt, model, ip) {
-  if (isRateLimited(ip)) {
-    return Response.json({ success: false, error: "Rate limit exceeded. Try again shortly." }, { status: 429, headers: corsHeaders() });
-  }
   if (!prompt || !prompt.trim()) {
     return Response.json({ success: false, error: "Missing required parameter: q, query, or prompt" }, { status: 400, headers: corsHeaders() });
   }
   prompt = prompt.trim();
-  if (prompt.length > MAX_PROMPT_LENGTH) {
-    return Response.json({ success: false, error: `Prompt exceeds maximum length of ${MAX_PROMPT_LENGTH} characters` }, { status: 400, headers: corsHeaders() });
-  }
   await refreshModels();
   if (!model) model = DEFAULT_MODEL;
   if (!POLLINATIONS_MODELS.has(model) && model !== "vexa" && modelsCache.keys.size > 0 && !modelsCache.keys.has(model)) {

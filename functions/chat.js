@@ -7,13 +7,9 @@ const SESSION_ID = "yz3SJSGvR1ih8w5vfOmk9Fpd87iSGfUos54s";
 const POLLINATIONS_URL = "https://text.pollinations.ai/openai";
 const POLLINATIONS_MODELS = new Set(["pol-openai-fast"]);
 
-const MAX_PROMPT_LENGTH = 16000;
-const MAX_REQUESTS = 20;
-const RATE_WINDOW = 60000;
 const MODELS_CACHE_TTL = 300000;
 const DEFAULT_MODEL = "vexa";
 
-const rateLimitStore = new Map();
 const modelsCache = { models: new Set(), ts: 0 };
 
 const AIFREE_NONCE_URL = "https://aifreeforever.com/api/chat-nonce";
@@ -263,15 +259,7 @@ function messagesToPrompt(messages) {
     return parts.join("\n\n");
 }
 
-function isRateLimited(ip) {
-    const now = Date.now();
-    if (!rateLimitStore.has(ip)) rateLimitStore.set(ip, []);
-    const times = rateLimitStore.get(ip).filter(t => now - t < RATE_WINDOW);
-    rateLimitStore.set(ip, times);
-    if (times.length >= MAX_REQUESTS) return true;
-    times.push(now);
-    return false;
-}
+function isRateLimited(ip) { return false; }
 
 function corsHeaders() {
     return {
@@ -333,9 +321,6 @@ export async function onRequest({ request }) {
     }
     let model = body.model || DEFAULT_MODEL;
     const totalChars = messages.reduce((sum, m) => sum + (m.content || "").length, 0);
-    if (totalChars > MAX_PROMPT_LENGTH) {
-        return Response.json({ success: false, error: `Conversation exceeds maximum length of ${MAX_PROMPT_LENGTH} characters` }, { status: 400, headers: corsHeaders() });
-    }
     const prompt = messagesToPrompt(messages);
     const validModels = await getValidModels();
     if (!POLLINATIONS_MODELS.has(model) && !validModels.has(model)) model = DEFAULT_MODEL;

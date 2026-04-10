@@ -5,10 +5,6 @@ const POLLINATIONS_MODELS = new Set(["flux", "turbo-img", "kontext", "seedream",
 const PREFERENCES = { speed: "turbo", quality: "quality" };
 const DEFAULT_MODEL = "hd";
 const DEFAULT_PREFERENCE = "speed";
-const MAX_REQUESTS = 10;
-const RATE_WINDOW = 60000;
-
-const rateLimitStore = new Map();
 const proxyCache = new Map();
 
 function corsHeaders() {
@@ -20,15 +16,7 @@ function corsHeaders() {
     };
 }
 
-function isRateLimited(ip) {
-    const now = Date.now();
-    if (!rateLimitStore.has(ip)) rateLimitStore.set(ip, []);
-    const times = rateLimitStore.get(ip).filter(t => now - t < RATE_WINDOW);
-    rateLimitStore.set(ip, times);
-    if (times.length >= MAX_REQUESTS) return true;
-    times.push(now);
-    return false;
-}
+function isRateLimited(ip) { return false; }
 
 async function md5Hex(str) {
     const encoded = new TextEncoder().encode(str);
