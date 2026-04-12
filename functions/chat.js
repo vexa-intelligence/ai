@@ -16,12 +16,12 @@ const AIFREE_NONCE_URL = "https://aifreeforever.com/api/chat-nonce";
 const AIFREE_ANSWER_URL = "https://aifreeforever.com/api/generate-ai-answer";
 
 const HDRS = {
-  "User-Agent": UA,
-  "Referer": TOOLBAZ_PAGE_URL,
-  "Origin": "https://toolbaz.com",
-  "X-Requested-With": "XMLHttpRequest",
-  "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-  "Accept-Language": "en-US,en;q=0.9",
+    "User-Agent": UA,
+    "Referer": TOOLBAZ_PAGE_URL,
+    "Origin": "https://toolbaz.com",
+    "X-Requested-With": "XMLHttpRequest",
+    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+    "Accept-Language": "en-US,en;q=0.9",
 };
 
 async function getAiFreeNonce() {
@@ -248,12 +248,14 @@ async function toolbazComplete(prompt, model) {
 }
 
 function messagesToPrompt(messages) {
-    const parts = messages.map(m => {
+    const systemMsg = messages.find(m => m.role === "system")?.content || "";
+    const rest = messages.filter(m => m.role !== "system");
+    const parts = rest.map((m, i) => {
         const role = m.role || "user";
         const content = (m.content || "").trim();
-        if (role === "system") return `[System]: ${content}`;
+        const prefix = i === 0 && systemMsg ? `${systemMsg}\n\n` : "";
         if (role === "assistant") return `Assistant: ${content}`;
-        return `User: ${content}`;
+        return `User: ${prefix}${content}`;
     });
     parts.push("Assistant:");
     return parts.join("\n\n");
