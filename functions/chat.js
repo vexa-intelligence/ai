@@ -244,7 +244,32 @@ async function toolbazComplete(prompt, model) {
     if (text.toLowerCase().includes("capcha") || text.toLowerCase().includes("expired")) {
         throw new Error(`Toolbaz rejected request: ${text.slice(0, 200)}`);
     }
-    return text.trim();
+    return parseFull(text);
+}
+
+function parseFull(raw) {
+    raw = raw.replace(/\[model:[^\]]*\]/g, "").trim();
+    if (raw.trimStart().startsWith("data:")) {
+        const parts = raw.split("\n").filter(l => l.startsWith("data:")).map(l => parseChunk(l.slice(5)));
+        const text = parts.join("").trim();
+        if (text) return text;
+    }
+    try {
+        const obj = JSON.parse(raw);
+        if (typeof obj === "object" && obj) {
+            for (const k of ["result", "text", "content", "output", "message", "response", "data"]) {
+                if (obj[k]) return String(obj[k]).trim();
+            }
+        }
+    } catch (_) { }
+    return raw.replace(/<[^>]+>/g, "").trim();
+}
+
+function parseChunk(chunk) {
+    chunk = chunk.trim();
+    if (!chunk || chunk === "[DONE]") return "";
+    try { return JSON.parse(chunk).choices[0].delta?.content || ""; }
+    catch (_) { return chunk; }
 }
 
 function messagesToPrompt(messages) {
