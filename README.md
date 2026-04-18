@@ -2,160 +2,263 @@
 
 # Vexa AI API
 
-[![License](https://img.shields.io/badge/license-CC_BY_NC_4.0-blue.svg)](LICENSE)
-[![GitHub](https://img.shields.io/badge/github-vexa--intelligence%2Fai-informational.svg)](https://github.com/vexa-intelligence/ai)
-[![Live API](https://img.shields.io/badge/api-live-brightgreen.svg)](https://vexa-ai.pages.dev)
+A free, multi-provider AI API for text and image generation. No API keys. No accounts. Just fetch.
 
-A multi-provider AI service offering text generation, image generation, and model management through a unified API. Vexa AI aggregates multiple AI providers to give you access to cutting-edge models without managing multiple API keys.
+**Base URL** — `https://vexa-ai.pages.dev`
 
-## **Features**
+---
 
-- **Multi-Provider Support**: Access models from DeepAI, Pollinations, TalkAI, Dolphin AI, and more
-- **Text Generation**: Chat completion and simple prompt generation with conversation history
-- **Image Generation**: Create images from text prompts using various models
-- **Streaming Support**: Real-time streaming responses for chat completions
-- **Health Monitoring**: Built-in health checks and model availability monitoring
-- **No API Keys Required**: Free tier available with rate limiting
-- **CORS Enabled**: Ready for web application integration
+## Endpoints
 
-## **Quick Start**
+| Endpoint | Methods | Description |
+|----------|---------|-------------|
+| `/query` | GET, POST | Single-turn text generation |
+| `/chat` | POST | Multi-turn chat with streaming |
+| `/image` | GET, POST | Text-to-image generation |
+| `/image/proxy/:id` | GET | Serve a generated image |
+| `/models` | GET | List available models and defaults |
+| `/health` | GET | System and model status |
 
-### **Base URL**
+---
+
+## `/query`
+
+The simplest way to get a text response. Send a prompt, get text back as JSON.
+
+**GET**
+```bash
+curl "https://vexa-ai.pages.dev/query?q=What+is+a+closure+in+JavaScript"
 ```
-https://vexa-ai.pages.dev
+
+**POST**
+```bash
+curl -X POST https://vexa-ai.pages.dev/query \
+  -H "Content-Type: application/json" \
+  -d '{ "prompt": "What is a closure in JavaScript" }'
 ```
 
-### **Simple Chat Example**
+**Parameters**
+
+| Name | Required | Description |
+|------|----------|-------------|
+| `q` / `query` / `prompt` | Yes | Your prompt |
+| `model` | No | Model name (default: `vexa`) |
+
+**Response**
+```json
+{
+  "success": true,
+  "response": "A closure is...",
+  "model": "vexa",
+  "elapsed_ms": 843,
+  "source": "deepai.org"
+}
+```
+
+---
+
+## `/chat`
+
+Multi-turn chat with full message history. **Always streams** via Server-Sent Events — there is no JSON mode.
+
 ```bash
 curl -X POST https://vexa-ai.pages.dev/chat \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "vexa",
     "messages": [
-      {"role": "user", "content": "Hello, how are you?"}
+      { "role": "system", "content": "You are a concise assistant." },
+      { "role": "user", "content": "What is a webhook?" }
     ]
   }'
 ```
 
-### **Image Generation Example**
-```bash
-curl "https://vexa-ai.pages.dev/image?q=a cat sitting on a table"
+**Parameters**
+
+| Name | Required | Description |
+|------|----------|-------------|
+| `messages` | Yes | Array of `{ role, content }` objects |
+| `model` | No | Model name (default: `vexa`) |
+
+**Message roles:** `system` · `user` · `assistant`
+
+**Limits:** 100 messages max · 32,000 chars per message · 200,000 total chars · at least one `user` message required
+
+**Stream format (SSE)**
+```
+data: {"choices":[{"delta":{"content":"A webhook"},"finish_reason":null}]}
+data: {"choices":[{"delta":{"content":" is a..."},"finish_reason":null}]}
+data: {"choices":[{"delta":{},"finish_reason":"stop"}]}
+data: [DONE]
 ```
 
-## **Available Endpoints**
+**Error during stream**
+```
+data: {"error":{"message":"..."},"finish_reason":"error"}
+```
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | API documentation and information |
-| `/chat` | POST | Chat completion with conversation history |
-| `/query` | GET/POST | Simple single-prompt text generation |
-| `/image` | GET/POST | Generate images from text prompts |
-| `/image/proxy/:id` | GET | Proxy for serving generated images |
-| `/models` | GET | List available AI models and their status |
-| `/health` | GET | System health check and service status |
+> **Note on history support** — not all models forward the full message array. Check `/models` to see which providers are active; providers like TalkAI only receive the last user message. Models via DeepAI and Pollinations support full history and system prompts.
 
-*For real-time endpoint information, visit: `https://vexa-ai.pages.dev/`*
+---
 
-## **Documentation**
+## `/image`
 
-For detailed API documentation, examples, and configuration options, visit our [DOCUMENTATION](./DOCUMENTATION/) folder:
+Generate an image from a text prompt.
 
-- [API Endpoints](./DOCUMENTATION/endpoints.md) - Detailed endpoint documentation
-- [Models](./DOCUMENTATION/models.md) - Available AI models and their capabilities
-- [Providers](./DOCUMENTATION/providers.md) - Supported AI providers
-- [Configuration](./DOCUMENTATION/configuration.md) - Configuration options and settings
-- [Quick Start](./DOCUMENTATION/quick-start.md) - Getting started guide
+**GET**
+```bash
+curl "https://vexa-ai.pages.dev/image?q=a+neon+lit+Tokyo+alley+at+2am"
+```
 
-## **Usage Examples**
+**POST**
+```bash
+curl -X POST https://vexa-ai.pages.dev/image \
+  -H "Content-Type: application/json" \
+  -d '{ "prompt": "a neon lit Tokyo alley at 2am", "model": "flux" }'
+```
 
-### **Streaming Chat**
-```javascript
-const response = await fetch('https://vexa-ai.pages.dev/chat', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    model: 'vexa',
-    messages: [
-      { role: 'user', content: 'Tell me a story' }
-    ],
-    stream: true
-  })
-});
+**Parameters**
 
-const reader = response.body.getReader();
-const decoder = new TextDecoder();
+| Name | Required | Description |
+|------|----------|-------------|
+| `q` / `prompt` | Yes | Image description (max 1,000 chars) |
+| `model` | No | Image model (default: `hd`) |
+| `preference` | No | `speed` or `quality` — only applies to the `hd` model |
 
-while (true) {
-  const { done, value } = await reader.read();
-  if (done) break;
-  
-  const chunk = decoder.decode(value);
-  console.log(chunk);
+For available image models, check [`/models?type=image`](https://vexa-ai.pages.dev/models?type=image).
+
+**Response**
+```json
+{
+  "success": true,
+  "prompt": "a neon lit Tokyo alley at 2am",
+  "model": "flux",
+  "proxy_url": "https://vexa-ai.pages.dev/image/proxy/abc123",
+  "source": "pollinations.ai",
+  "elapsed_ms": 2840
 }
 ```
 
-### **Image Generation with POST**
-```javascript
-const response = await fetch('https://vexa-ai.pages.dev/image', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    prompt: 'A beautiful sunset over mountains',
-    model: 'flux',
-    preference: 'quality'
-  })
-});
+Use `proxy_url` directly as an image source in your app.
 
-const result = await response.json();
-console.log('Image URL:', result.proxy_url);
+---
+
+## `/image/proxy/:id`
+
+Serves the generated image. Use the `proxy_url` from the `/image` response.
+
+```bash
+curl "https://vexa-ai.pages.dev/image/proxy/abc123" --output image.png
 ```
 
-## **Default Models**
+Returns the image binary with appropriate `Content-Type` and a 24-hour cache header. Returns `404` if the ID is not found. Proxy IDs are stored in memory — they do not survive server restarts.
 
-*Current defaults are available via the `/models` endpoint:*
+---
+
+## `/models`
+
+Returns the current list of available models, grouped by provider, along with system defaults.
+
 ```bash
 curl "https://vexa-ai.pages.dev/models"
+curl "https://vexa-ai.pages.dev/models?type=text"
+curl "https://vexa-ai.pages.dev/models?type=image"
+curl "https://vexa-ai.pages.dev/models?details=true"
 ```
 
-This returns the current default text model, image model, and preferences configured in the system.
+**Parameters**
 
-## **Rate Limits**
+| Name | Default | Description |
+|------|---------|-------------|
+| `type` | — | Filter by `text` or `image` |
+| `details` | `false` | Include provider, speed, quality, and enabled status per model |
 
-- Requests are limited per IP address
-- No authentication required for basic usage
-- Consider implementing caching for better performance
+**Response shape**
+```json
+{
+  "success": true,
+  "defaults": {
+    "text": "vexa",
+    "image": "hd",
+    "image_preference": "speed"
+  },
+  "counts": { "text": 15, "image": 5 },
+  "text_models": ["vexa", "..."],
+  "text_models_by_provider": {
+    "DeepAI": [ { "name": "vexa", "label": "Vexa", "provider": "vexa-ai", "description": "..." } ],
+    "Pollinations": [ { "name": "pol-openai-fast", ... } ],
+    "AIFree": [ ... ],
+    "Toolbaz": [ ... ]
+  },
+  "image_models": ["hd", "flux", "..."],
+  "valid_image_models": "hd, flux, ..."
+}
+```
 
-## **Error Handling**
+Always use this endpoint as the source of truth for model names — the list updates dynamically.
 
-All endpoints return consistent error responses:
+---
+
+## `/health`
+
+Checks system and upstream provider reachability, and optionally probes each model.
+
+```bash
+curl "https://vexa-ai.pages.dev/health"
+curl "https://vexa-ai.pages.dev/health?skip_models=true"
+```
+
+**Parameters**
+
+| Name | Default | Description |
+|------|---------|-------------|
+| `skip_models` | `false` | Skip per-model health probes (much faster) |
+
+**Response**
+```json
+{
+  "success": true,
+  "status": "ok",
+  "timestamp": 1718000000,
+  "total_ms": 1240,
+  "checks": {
+    "page": { "reachable": true, "status_code": 200, "latency_ms": 95 },
+    "token": { "reachable": true, "token_received": true, "status_code": 200, "latency_ms": 80 },
+    "image": { "reachable": true, "status_code": 200, "latency_ms": 110 },
+    "models": {
+      "vexa": { "ok": true, "latency_ms": 430 }
+    }
+  }
+}
+```
+
+**Status values:** `ok` · `degraded` · `error`
+
+If any models fail, a `failed_models` array is included in the response.
+
+---
+
+## CORS & Auth
+
+All endpoints return `Access-Control-Allow-Origin: *`. No authentication is required. Requests are rate-limited per IP.
+
+---
+
+## Error Format
+
+Every error — across all endpoints — follows this shape:
 
 ```json
 {
   "success": false,
-  "error": "Error message",
-  "detail": "Detailed error information"
+  "error": "Human-readable message",
+  "detail": "Optional extra context"
 }
 ```
 
-## **Health Monitoring
-
-Check the system status:
-
-```bash
-curl https://vexa-ai.pages.dev/health
-```
-
-## **GitHub Repository**
-
-Find the source code and contribute at:
-[https://github.com/vexa-intelligence/ai](https://github.com/vexa-intelligence/ai)
-
-## **License**
-
-This project is licensed under the CC BY-NC 4.0 License - see the [LICENSE](LICENSE) file for details.
-
-## **Support**
-
-For issues, feature requests, or questions:
-- Open an issue on [GitHub](https://github.com/vexa-intelligence/ai/issues)
-- Check the [API documentation](./DOCUMENTATION/) for detailed information
+| Status | When |
+|--------|------|
+| `400` | Missing or invalid parameters / malformed JSON |
+| `404` | Resource not found (e.g. expired proxy ID) |
+| `405` | Wrong HTTP method |
+| `502` | Upstream provider failed |
+| `500` | Internal server error |
