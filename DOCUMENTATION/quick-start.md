@@ -1,609 +1,300 @@
-# Quick Start Guide
+# Quick Start
 
-Welcome to the Vexa AI API! This guide will help you get up and running in minutes.
+No setup. No API key. Start with a single `curl`.
 
-## What You'll Need
+**Base URL** — `https://vexa-ai.pages.dev`
 
-- A web browser or API client (like curl, Postman, or any programming language)
-- Internet connection
-- No API keys required (free tier)
+---
 
-## Base URL
+## Your first call
 
-```
-https://vexa-ai.pages.dev
-```
-
-## Your First API Call
-
-### Try It Now - Simple Text Generation
-
-Open this link in your browser:
-```
-https://vexa-ai.pages.dev/query?q=Hello%20world
-```
-
-Or use curl:
 ```bash
-curl "https://vexa-ai.pages.dev/query?q=Hello world"
+curl "https://vexa-ai.pages.dev/query?q=Hello"
 ```
 
-**Expected Response:**
 ```json
 {
   "success": true,
-  "response": "AI response to your query",
-  "model": "current_default_model",
-  "elapsed_ms": "response_time_ms",
-  "source": "provider_name"
+  "response": "Hello! How can I help you today?",
+  "model": "vexa",
+  "elapsed_ms": 721,
+  "source": "deepai.org"
 }
 ```
 
-*The actual model and response time will vary based on current system configuration.*
+---
 
-## Quick Examples
+## Pick the right endpoint
 
-### 1. Generate Your First Image
+**Just need a text response?** Use `/query` — GET or POST, returns plain JSON.
 
-```bash
-curl "https://vexa-ai.pages.dev/image?q=a cute cat"
-```
+**Building a chatbot?** Use `/chat` — POST only, always streams via SSE.
 
-**Response:**
-```json
-{
-  "success": true,
-  "prompt": "a cute cat",
-  "model": "current_image_model",
-  "proxy_url": "https://vexa-ai.pages.dev/image/proxy/image_id",
-  "source": "image_provider",
-  "elapsed_ms": "generation_time_ms"
-}
-```
+**Generating an image?** Use `/image` — GET or POST, returns a `proxy_url` you can drop straight into an `<img>` tag.
 
-Visit the `proxy_url` to see your generated image!
+---
 
-### 2. Have a Conversation
+## JavaScript
 
-```bash
-curl -X POST https://vexa-ai.pages.dev/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "messages": [
-      {"role": "user", "content": "What is the capital of France?"}
-    ]
-  }'
-```
-
-*Note: The model parameter is optional. The system will use the current default model.*
-
-### 3. Check Available Models
-
-```bash
-curl "https://vexa-ai.pages.dev/models"
-```
-
-This returns current available models, defaults, and system configuration.
-
-### 4. Check System Health
-
-```bash
-curl "https://vexa-ai.pages.dev/health"
-```
-
-This returns system status, provider health, and model availability.
-
-## Programming Language Examples
-
-### JavaScript (Browser)
-
-```html
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Vexa AI Test</title>
-</head>
-<body>
-    <input type="text" id="prompt" placeholder="Enter your prompt">
-    <button onclick="generateResponse()">Generate</button>
-    <div id="response"></div>
-
-    <script>
-        async function generateResponse() {
-            const prompt = document.getElementById('prompt').value;
-            const responseDiv = document.getElementById('response');
-            
-            try {
-                const response = await fetch(`https://vexa-ai.pages.dev/query?q=${encodeURIComponent(prompt)}`);
-                const data = await response.json();
-                
-                if (data.success) {
-                    responseDiv.innerHTML = `<strong>Response:</strong> ${data.response}`;
-                } else {
-                    responseDiv.innerHTML = `<strong>Error:</strong> ${data.error}`;
-                }
-            } catch (error) {
-                responseDiv.innerHTML = `<strong>Error:</strong> ${error.message}`;
-            }
-        }
-    </script>
-</body>
-</html>
-```
-
-### JavaScript (Node.js)
+### One-off query
 
 ```javascript
-// Install node-fetch if needed: npm install node-fetch
-const fetch = require('node-fetch');
-
-async function chatWithAI(message) {
-    try {
-        const response = await fetch('https://vexa-ai.pages.dev/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                messages: [{ role: 'user', content: message }]
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            console.log('AI Response:', data.message.content);
-            console.log('Model used:', data.model);
-            console.log('Response time:', data.elapsed_ms + 'ms');
-        } else {
-            console.error('Error:', data.error);
-        }
-    } catch (error) {
-        console.error('Request failed:', error);
-    }
-}
-
-// Get current configuration first
-async function getConfiguration() {
-    const response = await fetch('https://vexa-ai.pages.dev/models');
-    const data = await response.json();
-    
-    if (data.success) {
-        console.log('Default text model:', data.defaults.text);
-        console.log('Default image model:', data.defaults.image);
-        console.log('Available text models:', data.text_models.length);
-        console.log('Available image models:', data.image_models.length);
-    }
-}
-
-// Usage
-getConfiguration();
-chatWithAI('Explain quantum computing in simple terms');
+const res = await fetch(
+  'https://vexa-ai.pages.dev/query?q=' + encodeURIComponent('Explain async/await in one paragraph')
+);
+const { response } = await res.json();
+console.log(response);
 ```
 
-### Python
+### Streaming chat
+
+`/chat` always streams — never try to `.json()` it.
+
+```javascript
+async function chat(messages, model = 'vexa') {
+  const res = await fetch('https://vexa-ai.pages.dev/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, model })
+  });
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let output = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    for (const line of decoder.decode(value).split('\n')) {
+      if (!line.startsWith('data: ') || line.includes('[DONE]')) continue;
+      try {
+        const content = JSON.parse(line.slice(6)).choices?.[0]?.delta?.content;
+        if (content) output += content;
+      } catch (_) {}
+    }
+  }
+
+  return output;
+}
+
+// Single turn
+const reply = await chat([
+  { role: 'user', content: 'What is a JWT?' }
+]);
+
+// With system prompt
+const reply2 = await chat([
+  { role: 'system', content: 'You are a terse coding assistant.' },
+  { role: 'user', content: 'What is a closure?' }
+]);
+```
+
+### Stateful chatbot
+
+Pass the full message history on every request — the API is stateless.
+
+```javascript
+const history = [];
+
+async function send(userMessage) {
+  history.push({ role: 'user', content: userMessage });
+
+  const res = await fetch('https://vexa-ai.pages.dev/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages: history })
+  });
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let reply = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    for (const line of decoder.decode(value).split('\n')) {
+      if (!line.startsWith('data: ') || line.includes('[DONE]')) continue;
+      try {
+        const content = JSON.parse(line.slice(6)).choices?.[0]?.delta?.content;
+        if (content) reply += content;
+      } catch (_) {}
+    }
+  }
+
+  history.push({ role: 'assistant', content: reply });
+  return reply;
+}
+
+await send('My name is Alex.');
+await send('What did I just tell you?'); // → "Your name is Alex."
+```
+
+### Image generation
+
+```javascript
+const res = await fetch('https://vexa-ai.pages.dev/image', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ prompt: 'a fox in a snowy forest, oil painting' })
+});
+const { proxy_url } = await res.json();
+// Use proxy_url directly in <img src="...">
+```
+
+---
+
+## Python
+
+### One-off query
 
 ```python
 import requests
-import json
 
-def get_configuration():
-    """Get current API configuration"""
-    try:
-        response = requests.get("https://vexa-ai.pages.dev/models")
-        data = response.json()
-        
-        if data.get('success'):
-            print(f"Default text model: {data.get('defaults', {}).get('text', 'unknown')}")
-            print(f"Default image model: {data.get('defaults', {}).get('image', 'unknown')}")
-            print(f"Available text models: {len(data.get('text_models', []))}")
-            print(f"Available image models: {len(data.get('image_models', []))}")
-            return data
-    except Exception as e:
-        print(f"Configuration check failed: {e}")
-    return None
-
-def chat_with_ai(message):
-    url = "https://vexa-ai.pages.dev/chat"
-    headers = {"Content-Type": "application/json"}
-    data = {
-        "messages": [{"role": "user", "content": message}]
-    }
-    
-    try:
-        response = requests.post(url, headers=headers, json=data)
-        result = response.json()
-        
-        if result.get('success'):
-            print(f"AI Response: {result['message']['content']}")
-            print(f"Model: {result['model']}")
-            print(f"Time: {result['elapsed_ms']}ms")
-        else:
-            print(f"Error: {result.get('error')}")
-    except Exception as e:
-        print(f"Request failed: {e}")
-
-def check_system_health():
-    """Check system health status"""
-    try:
-        response = requests.get("https://vexa-ai.pages.dev/health")
-        data = response.json()
-        
-        if data.get('success'):
-            print(f"System Status: {data.get('status', 'unknown')}")
-            print(f"Total check time: {data.get('total_ms', 'unknown')}ms")
-            
-            failed_models = data.get('failed_models', [])
-            if failed_models:
-                print(f"Failed models: {failed_models}")
-        else:
-            print(f"Health check failed: {data.get('error')}")
-    except Exception as e:
-        print(f"Health check failed: {e}")
-
-# Usage
-print("=== Configuration ===")
-config = get_configuration()
-
-print("\n=== System Health ===")
-check_system_health()
-
-print("\n=== Chat Example ===")
-chat_with_ai("What is artificial intelligence?")
+res = requests.get('https://vexa-ai.pages.dev/query', params={'q': 'What is a REST API?'})
+print(res.json()['response'])
 ```
 
-### PHP
+### Streaming chat
 
-```php
-<?php
-function chatWithAI($message) {
-    $url = 'https://vexa-ai.pages.dev/chat';
-    $data = json_encode([
-        'messages' => [
-            ['role' => 'user', 'content' => $message]
-        ]
-    ]);
-    
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Content-Type: application/json'
-    ]);
-    
-    $response = curl_exec($ch);
-    curl_close($ch);
-    
-    $result = json_decode($response, true);
-    
-    if ($result['success']) {
-        echo "AI Response: " . $result['message']['content'] . "\n";
-        echo "Model: " . $result['model'] . "\n";
-        echo "Time: " . $result['elapsed_ms'] . "ms\n";
-    } else {
-        echo "Error: " . $result['error'] . "\n";
-    }
-}
+```python
+import requests, json
 
-// Usage
-chatWithAI("Tell me a joke");
-?>
+def chat(messages, model='vexa'):
+    res = requests.post(
+        'https://vexa-ai.pages.dev/chat',
+        json={'messages': messages, 'model': model},
+        stream=True
+    )
+    output = ''
+    for line in res.iter_lines():
+        if not line:
+            continue
+        line = line.decode()
+        if not line.startswith('data: ') or '[DONE]' in line:
+            continue
+        try:
+            content = json.loads(line[6:])['choices'][0]['delta'].get('content', '')
+            if content:
+                print(content, end='', flush=True)
+                output += content
+        except Exception:
+            pass
+    print()
+    return output
+
+chat([{'role': 'user', 'content': 'Write a Python one-liner to flatten a nested list'}])
 ```
 
-## Common Use Cases
+### Image generation
 
-### 1. Simple Chatbot
+```python
+import requests
+
+res = requests.post(
+    'https://vexa-ai.pages.dev/image',
+    json={'prompt': 'a fox in a snowy forest, oil painting'}
+)
+data = res.json()
+print(data['proxy_url'])  # direct image URL
+```
+
+---
+
+## Node.js
 
 ```javascript
-async function createChatbot() {
-    const conversation = [];
-    
-    // Get current configuration
-    const config = await fetch('https://vexa-ai.pages.dev/models').then(r => r.json());
-    
-    async function sendMessage(userMessage) {
-        conversation.push({ role: 'user', content: userMessage });
-        
-        const response = await fetch('https://vexa-ai.pages.dev/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: conversation })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            conversation.push({ role: 'assistant', content: data.message.content });
-            return data.message.content;
-        }
-        
-        return 'Sorry, I encountered an error.';
+import fetch from 'node-fetch'; // npm install node-fetch
+
+async function chat(messages) {
+  const res = await fetch('https://vexa-ai.pages.dev/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages })
+  });
+
+  const decoder = new TextDecoder();
+  let output = '';
+
+  for await (const chunk of res.body) {
+    for (const line of decoder.decode(chunk).split('\n')) {
+      if (!line.startsWith('data: ') || line.includes('[DONE]')) continue;
+      try {
+        const content = JSON.parse(line.slice(6)).choices?.[0]?.delta?.content;
+        if (content) { process.stdout.write(content); output += content; }
+      } catch (_) {}
     }
-    
-    return { 
-        sendMessage,
-        defaultModel: config.defaults?.text,
-        availableModels: config.text_models
-    };
+  }
+
+  return output;
 }
+
+chat([{ role: 'user', content: 'Explain closures in JavaScript' }]);
 ```
 
-### 2. Image Generator
+---
+
+## Choosing a model
 
 ```javascript
-async function generateImage(prompt) {
-    // Get current image model configuration
-    const config = await fetch('https://vexa-ai.pages.dev/models').then(r => r.json());
-    
-    const response = await fetch(`https://vexa-ai.pages.dev/image`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            prompt,
-            model: config.defaults?.image // Use current default
-        })
-    });
-    
-    const data = await response.json();
-    
-    if (data.success) {
-        return {
-            imageUrl: data.proxy_url,
-            prompt: data.prompt,
-            model: data.model,
-            source: data.source
-        };
-    }
-    
-    throw new Error(data.error);
-}
+// Always fetch the live list — models update dynamically
+const { text_models, text_models_by_provider, defaults } = await fetch(
+  'https://vexa-ai.pages.dev/models'
+).then(r => r.json());
 
-// Usage
-generateImage('a sunset over mountains')
-    .then(result => {
-        console.log('Image URL:', result.imageUrl);
-        console.log('Model used:', result.model);
-        // Display the image or use the URL
-    })
-    .catch(error => console.error(error));
+console.log('Default model:', defaults.text);
+console.log('All text models:', text_models);
+console.log('By provider:', Object.keys(text_models_by_provider));
 ```
 
-### 3. Content Summarizer
+Pass any model name in your request:
 
 ```javascript
-async function summarizeText(text) {
-    // Get available models to find a suitable one
-    const config = await fetch('https://vexa-ai.pages.dev/models').then(r => r.json());
-    
-    const response = await fetch('https://vexa-ai.pages.dev/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            model: config.defaults?.text, // Use current default model
-            messages: [
-                { role: 'system', content: 'You are a helpful assistant that summarizes text concisely.' },
-                { role: 'user', content: `Please summarize this text: ${text}` }
-            ]
-        })
-    });
-    
-    const data = await response.json();
-    return data.success ? data.message.content : 'Summarization failed';
-}
+// /query
+fetch('https://vexa-ai.pages.dev/query', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ prompt: 'Hello', model: 'pol-openai-fast' })
+});
+
+// /chat
+fetch('https://vexa-ai.pages.dev/chat', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    model: 'pol-openai-fast',
+    messages: [{ role: 'user', content: 'Hello' }]
+  })
+});
 ```
 
-## Streaming Responses
+> Not all models support conversation history and system prompts. Models routed through DeepAI and Pollinations forward the full message array. Others may only see the last user message. Check `/models?details=true` to see which provider handles each model.
 
-For real-time responses, use streaming:
+---
+
+## Error handling
 
 ```javascript
-async function streamChat(message) {
-    const response = await fetch('https://vexa-ai.pages.dev/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            messages: [{ role: 'user', content: message }],
-            stream: true
-        })
-    });
-    
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let fullResponse = '';
-    
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
-        
-        for (const line of lines) {
-            if (line.startsWith('data: ') && !line.includes('[DONE]')) {
-                try {
-                    const data = JSON.parse(line.slice(6));
-                    const content = data.choices?.[0]?.delta?.content;
-                    if (content) {
-                        fullResponse += content;
-                        console.log('Streaming:', content); // Real-time output
-                    }
-                } catch (e) {
-                    // Ignore parsing errors
-                }
-            }
-        }
-    }
-    
-    return fullResponse;
+// /query and /image — standard JSON errors
+const data = await fetch('https://vexa-ai.pages.dev/query?q=hello').then(r => r.json());
+if (!data.success) throw new Error(data.error);
+
+// /chat — errors arrive inside the stream
+for (const line of lines) {
+  if (!line.startsWith('data: ')) continue;
+  const parsed = JSON.parse(line.slice(6));
+  if (parsed.error) throw new Error(parsed.error.message);
 }
 ```
 
-## Error Handling
+---
 
-Always handle responses properly:
+## Common mistakes
 
-```javascript
-async function safeAPICall(endpoint, data) {
-    try {
-        const response = await fetch(`https://vexa-ai.pages.dev${endpoint}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        
-        const result = await response.json();
-        
-        if (!result.success) {
-            throw new Error(result.error || 'Unknown API error');
-        }
-        
-        return result;
-    } catch (error) {
-        console.error('API call failed:', error.message);
-        throw error;
-    }
-}
-```
+**Calling `.json()` on a `/chat` response** — `/chat` is SSE, not JSON. You'll get a parse error or empty object. Always use a stream reader.
 
-## Best Practices
+**No `user` message in the array** — `/chat` requires at least one message with `role: "user"`. Missing it returns a `400`.
 
-### 1. Choose the Right Model
+**Using an expired proxy ID** — image proxy IDs live in memory. They don't survive server restarts and return `404` once gone.
 
-```bash
-# Get current available models first
-curl "https://vexa-ai.pages.dev/models?type=text"
-
-# Use the default model for general use
-curl -X POST https://vexa-ai.pages.dev/chat \
-  -H "Content-Type: application/json" \
-  -d '{"messages": [{"role": "user", "content": "Hello"}]}'
-
-# Or specify a model from the available list
-curl -X POST https://vexa-ai.pages.dev/chat \
-  -H "Content-Type: application/json" \
-  -d '{"messages": [{"role": "user", "content": "Hello"}], "model": "chosen_model"}'
-```
-
-### 2. Check System Health First
-
-```javascript
-async function makeAPIRequest(endpoint, data) {
-    // Check health before making request
-    const health = await fetch('https://vexa-ai.pages.dev/health').then(r => r.json());
-    
-    if (!health.success || health.status !== 'ok') {
-        console.warn('System health degraded:', health.status);
-        // Implement fallback logic
-    }
-    
-    // Proceed with request
-    return fetch(`https://vexa-ai.pages.dev${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    });
-}
-```
-
-### 3. Cache Configuration and Responses
-
-```javascript
-const cache = new Map();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-async function getCachedConfiguration() {
-    const cacheKey = 'config';
-    const cached = cache.get(cacheKey);
-    
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-        return cached.data;
-    }
-    
-    const response = await fetch('https://vexa-ai.pages.dev/models');
-    const data = await response.json();
-    
-    cache.set(cacheKey, {
-        data,
-        timestamp: Date.now()
-    });
-    
-    return data;
-}
-
-async function cachedQuery(prompt) {
-    const cacheKey = `query:${prompt}`;
-    const cached = cache.get(cacheKey);
-    
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-        return cached.data;
-    }
-    
-    const response = await fetch(`https://vexa-ai.pages.dev/query?q=${encodeURIComponent(prompt)}`);
-    const data = await response.json();
-    
-    cache.set(cacheKey, {
-        data,
-        timestamp: Date.now()
-    });
-    
-    // Clear cache periodically
-    if (cache.size > 100) {
-        const firstKey = cache.keys().next().value;
-        cache.delete(firstKey);
-    }
-    
-    return data;
-}
-```
-
-## Next Steps
-
-Now that you're familiar with the basics:
-
-1. **Explore Models**: Check `/models` to see all available options
-2. **Try Different Endpoints**: Experiment with `/chat`, `/query`, and `/image`
-3. **Build Something**: Create a chatbot, image generator, or content tool
-4. **Read the Full Documentation**: Dive into detailed API documentation
-5. **Monitor Performance**: Use `/health` to check system status
-
-## Need Help?
-
-- **API Documentation**: Check the [DOCUMENTATION](../DOCUMENTATION/) folder
-- **GitHub Repository**: [https://github.com/vexa-intelligence/ai](https://github.com/vexa-intelligence/ai)
-- **Health Check**: Monitor system status at `/health`
-- **Model Status**: Check available models at `/models`
-
-## Troubleshooting
-
-### Common Issues
-
-1. **"Method not allowed"**
-   - Use POST for `/chat` endpoint
-   - Use GET for `/query` and `/health`
-
-2. **"Invalid JSON body"**
-   - Ensure proper JSON formatting
-   - Check for missing quotes or commas
-
-3. **"Missing required parameter"**
-   - Include all required fields in your request
-   - Check parameter names carefully
-
-4. **Slow responses**
-   - Check `/models` for available models and their performance
-   - Check system health at `/health`
-   - Try models with lower latency from the health check results
-
-### Debug Tips
-
-```javascript
-// Enable logging
-console.log('Request data:', JSON.stringify(data, null, 2));
-
-// Check response status
-console.log('Response status:', response.status);
-
-// Log full response for debugging
-console.log('Full response:', JSON.stringify(result, null, 2));
-```
-
-You're now ready to build amazing AI applications with Vexa AI! Happy coding!
+**Hardcoding model names** — models are scraped and updated dynamically. Fetch `/models` at startup and use the live list.
