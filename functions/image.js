@@ -26,7 +26,7 @@ async function parsePost(request) {
     };
 }
 
-async function run(args, baseUrl) {
+async function run(args, baseUrl, env) {
     const { prompt, model, preference } = args;
     if (!prompt || !String(prompt).trim()) {
         return Response.json({ success: false, error: "Missing required parameter: q or prompt" }, { status: 400, headers: corsHeaders() });
@@ -38,7 +38,7 @@ async function run(args, baseUrl) {
     } catch (e) {
         return Response.json({ success: false, error: `Generation failed: ${e.message}` }, { status: 502, headers: corsHeaders() });
     }
-    const proxyId = await makeProxyId(upstreamUrl);
+    const proxyId = await makeProxyId(upstreamUrl, env);
     const proxyUrl = `${baseUrl}/image/proxy/${proxyId}`;
     return Response.json({
         success: true,
@@ -51,17 +51,17 @@ async function run(args, baseUrl) {
     }, { status: 200, headers: corsHeaders() });
 }
 
-export async function onRequest({ request }) {
+export async function onRequest({ request, env }) {
     if (request.method === "OPTIONS") {
         return new Response(null, { status: 204, headers: corsHeaders() });
     }
     const url = new URL(request.url);
     const baseUrl = `${url.protocol}//${url.host}`;
-    if (request.method === "GET") return run(parseGet(url), baseUrl);
+    if (request.method === "GET") return run(parseGet(url), baseUrl, env);
     if (request.method === "POST") {
         const args = await parsePost(request);
         if (!args) return Response.json({ success: false, error: "Invalid JSON body" }, { status: 400, headers: corsHeaders() });
-        return run(args, baseUrl);
+        return run(args, baseUrl, env);
     }
     return Response.json({ success: false, error: "Method not allowed" }, { status: 405, headers: corsHeaders() });
 }

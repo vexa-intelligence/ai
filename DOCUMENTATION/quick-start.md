@@ -42,13 +42,14 @@ curl "https://vexa-ai.pages.dev/query?q=Hello"
 const res = await fetch(
   'https://vexa-ai.pages.dev/query?q=' + encodeURIComponent('Explain async/await in one paragraph')
 );
-const { response } = await res.json();
+const { success, response, error } = await res.json();
+if (!success) throw new Error(error);
 console.log(response);
 ```
 
 ### Streaming chat
 
-`/chat` always streams — never try to `.json()` it.
+`/chat` always streams — never call `.json()` on the response.
 
 ```javascript
 async function chat(messages, model = 'vexa') {
@@ -69,9 +70,13 @@ async function chat(messages, model = 'vexa') {
     for (const line of decoder.decode(value).split('\n')) {
       if (!line.startsWith('data: ') || line.includes('[DONE]')) continue;
       try {
-        const content = JSON.parse(line.slice(6)).choices?.[0]?.delta?.content;
+        const data = JSON.parse(line.slice(6));
+        if (data.error) throw new Error(data.error.message);
+        const content = data.choices?.[0]?.delta?.content;
         if (content) output += content;
-      } catch (_) {}
+      } catch (e) {
+        if (e.message !== 'Unexpected end of JSON input') throw e;
+      }
     }
   }
 
@@ -92,7 +97,7 @@ const reply2 = await chat([
 
 ### Stateful chatbot
 
-Pass the full message history on every request — the API is stateless.
+The API is stateless — pass the full message history on every request.
 
 ```javascript
 const history = [];
@@ -116,9 +121,13 @@ async function send(userMessage) {
     for (const line of decoder.decode(value).split('\n')) {
       if (!line.startsWith('data: ') || line.includes('[DONE]')) continue;
       try {
-        const content = JSON.parse(line.slice(6)).choices?.[0]?.delta?.content;
+        const data = JSON.parse(line.slice(6));
+        if (data.error) throw new Error(data.error.message);
+        const content = data.choices?.[0]?.delta?.content;
         if (content) reply += content;
-      } catch (_) {}
+      } catch (e) {
+        if (e.message !== 'Unexpected end of JSON input') throw e;
+      }
     }
   }
 
@@ -138,7 +147,8 @@ const res = await fetch('https://vexa-ai.pages.dev/image', {
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ prompt: 'a fox in a snowy forest, oil painting' })
 });
-const { proxy_url } = await res.json();
+const { success, proxy_url, error } = await res.json();
+if (!success) throw new Error(error);
 // Use proxy_url directly in <img src="...">
 ```
 
@@ -152,7 +162,10 @@ const { proxy_url } = await res.json();
 import requests
 
 res = requests.get('https://vexa-ai.pages.dev/query', params={'q': 'What is a REST API?'})
-print(res.json()['response'])
+data = res.json()
+if not data['success']:
+    raise RuntimeError(data['error'])
+print(data['response'])
 ```
 
 ### Streaming chat
@@ -173,13 +186,13 @@ def chat(messages, model='vexa'):
         line = line.decode()
         if not line.startswith('data: ') or '[DONE]' in line:
             continue
-        try:
-            content = json.loads(line[6:])['choices'][0]['delta'].get('content', '')
-            if content:
-                print(content, end='', flush=True)
-                output += content
-        except Exception:
-            pass
+        data = json.loads(line[6:])
+        if 'error' in data:
+            raise RuntimeError(data['error']['message'])
+        content = data['choices'][0]['delta'].get('content', '')
+        if content:
+            print(content, end='', flush=True)
+            output += content
     print()
     return output
 
@@ -196,21 +209,23 @@ res = requests.post(
     json={'prompt': 'a fox in a snowy forest, oil painting'}
 )
 data = res.json()
-print(data['proxy_url'])  # direct image URL
+if not data['success']:
+    raise RuntimeError(data['error'])
+print(data['proxy_url'])
 ```
 
 ---
 
 ## Node.js
 
-```javascript
-import fetch from 'node-fetch'; // npm install node-fetch
+Node 18+ has native `fetch`. No packages needed.
 
-async function chat(messages) {
+```javascript
+async function chat(messages, model = 'vexa') {
   const res = await fetch('https://vexa-ai.pages.dev/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages })
+    body: JSON.stringify({ messages, model })
   });
 
   const decoder = new TextDecoder();
@@ -220,9 +235,13 @@ async function chat(messages) {
     for (const line of decoder.decode(chunk).split('\n')) {
       if (!line.startsWith('data: ') || line.includes('[DONE]')) continue;
       try {
-        const content = JSON.parse(line.slice(6)).choices?.[0]?.delta?.content;
+        const data = JSON.parse(line.slice(6));
+        if (data.error) throw new Error(data.error.message);
+        const content = data.choices?.[0]?.delta?.content;
         if (content) { process.stdout.write(content); output += content; }
-      } catch (_) {}
+      } catch (e) {
+        if (e.message !== 'Unexpected end of JSON input') throw e;
+      }
     }
   }
 
@@ -236,8 +255,9 @@ chat([{ role: 'user', content: 'Explain closures in JavaScript' }]);
 
 ## Choosing a model
 
+Always fetch the live list — models update dynamically.
+
 ```javascript
-// Always fetch the live list — models update dynamically
 const { text_models, text_models_by_provider, defaults } = await fetch(
   'https://vexa-ai.pages.dev/models'
 ).then(r => r.json());
@@ -268,33 +288,16 @@ fetch('https://vexa-ai.pages.dev/chat', {
 });
 ```
 
-> Not all models support conversation history and system prompts. Models routed through DeepAI and Pollinations forward the full message array. Others may only see the last user message. Check `/models?details=true` to see which provider handles each model.
-
----
-
-## Error handling
-
-```javascript
-// /query and /image — standard JSON errors
-const data = await fetch('https://vexa-ai.pages.dev/query?q=hello').then(r => r.json());
-if (!data.success) throw new Error(data.error);
-
-// /chat — errors arrive inside the stream
-for (const line of lines) {
-  if (!line.startsWith('data: ')) continue;
-  const parsed = JSON.parse(line.slice(6));
-  if (parsed.error) throw new Error(parsed.error.message);
-}
-```
+Not all models support conversation history and system prompts — models routed through DeepAI and Pollinations forward the full message array, others receive only the last user message. Check [`/models`](./models.md) for the provider breakdown.
 
 ---
 
 ## Common mistakes
 
-**Calling `.json()` on a `/chat` response** — `/chat` is SSE, not JSON. You'll get a parse error or empty object. Always use a stream reader.
+**Calling `.json()` on a `/chat` response** — `/chat` is SSE, not JSON. Always use a stream reader.
 
-**No `user` message in the array** — `/chat` requires at least one message with `role: "user"`. Missing it returns a `400`.
+**No `user` message in the array** — `/chat` requires at least one message with `role: "user"`. Missing it returns a `400` before the stream opens.
 
-**Using an expired proxy ID** — image proxy IDs live in memory. They don't survive server restarts and return `404` once gone.
+**Using an expired proxy ID** — without a `PROXY_CACHE` KV binding, proxy IDs are in-memory and lost on restart. With KV bound, they persist for 24 hours. Either way, a missing ID returns `404`.
 
 **Hardcoding model names** — models are scraped and updated dynamically. Fetch `/models` at startup and use the live list.

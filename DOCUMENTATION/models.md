@@ -1,16 +1,21 @@
-# Models
+# /models
 
-Model availability is dynamic. Always query `/models` for the current list — don't hardcode model names.
+Returns available text and image models, grouped by provider, along with system defaults.
 
-```bash
-curl "https://vexa-ai.pages.dev/models"
-```
+**Method:** `GET`
 
 ---
 
-## Response structure
+## Parameters
 
-`/models` returns text and image models, grouped and flat, along with system defaults:
+| Name | Default | Description |
+|------|---------|-------------|
+| `type` | — | Filter by `text` or `image`. Omit for both |
+| `details` | `false` | Include per-model provider, speed, quality, and enabled status |
+
+---
+
+## Response
 
 ```json
 {
@@ -27,19 +32,28 @@ curl "https://vexa-ai.pages.dev/models"
   "text_models": ["vexa", "gpt-4.1-nano", "..."],
   "text_models_by_provider": {
     "DeepAI": [
-      { "name": "vexa", "label": "Vexa", "provider": "vexa-ai", "description": "Vexa AI - default" },
-      { "name": "gpt-4.1-nano", "label": "GPT-4.1 Nano", "provider": "OpenAI", "description": "..." }
+      { "name": "vexa", "label": "Vexa", "provider": "vexa-ai", "description": "..." }
     ],
-    "Pollinations": [ { "name": "pol-openai-fast", ... } ],
-    "AIFree": [ { "name": "gpt-5", ... } ],
-    "Toolbaz": [ ... ]
+    "Pollinations": [
+      { "name": "pol-openai-fast", "label": "...", "provider": "...", "description": "..." }
+    ]
   },
   "image_models": ["hd", "flux", "kontext", "seedream", "nanobanana"],
   "valid_image_models": "hd, flux, turbo-img, kontext, seedream, nanobanana"
 }
 ```
 
-Use `text_models_by_provider` when you need to show models grouped by provider in a UI. Use `text_models` for a flat list.
+When `details=true`, a `model_status` object is also included:
+
+```json
+{
+  "model_status": {
+    "vexa":   { "enabled": true },
+    "hd":     { "enabled": true, "type": "image" },
+    "flux":   { "enabled": true, "type": "image" }
+  }
+}
+```
 
 ---
 
@@ -52,112 +66,53 @@ curl "https://vexa-ai.pages.dev/models?type=text"
 # Image models only
 curl "https://vexa-ai.pages.dev/models?type=image"
 
-# Full detail — provider, speed, quality, enabled status
+# Full detail per model
 curl "https://vexa-ai.pages.dev/models?details=true"
 ```
 
-With `details=true`, the response also includes a `model_status` object:
-
-```json
-{
-  "model_status": {
-    "vexa": { "enabled": true },
-    "hd":   { "enabled": true, "type": "image" }
-  }
-}
-```
-
 ---
 
-## How models are discovered
+## How Models Are Discovered
 
-Text models are discovered dynamically at runtime by scraping upstream providers. The list is cached for 5 minutes. On each refresh:
+Text models are scraped from upstream providers at runtime and cached in memory for 5 minutes. On each refresh:
 
-1. Available models are fetched from each enabled provider
+1. Available models are fetched from each enabled provider (Toolbaz, DeepAI)
 2. Results are merged with static metadata (labels, provider names, speed/quality scores)
-3. Models belonging to disabled providers are excluded from the response
+3. Models from disabled providers are excluded from the response
 
-This means `/models` always reflects what's actually available right now — not a static snapshot.
+Image models are static — defined in `config.js` and fixed per deploy.
 
----
-
-## Providers
-
-Providers are enabled or disabled server-side. The `/models` response only includes models from currently enabled providers. To see which providers are active, call `/models?details=true` and inspect `model_status`, or check `/health`.
+Always query `/models` for the live list. Do not hardcode model names.
 
 ---
 
-## Conversation history support
+## Conversation History Support
 
-Not all providers forward the full message array. This matters when you use `/chat` with a system prompt or multi-turn history:
+Not all providers forward the full `messages` array. This affects `/chat` behaviour with system prompts and multi-turn history.
 
-| Provider | System prompt | Conversation history |
+| Provider | System prompt | Full history |
 |----------|:---:|:---:|
 | DeepAI | ✅ | ✅ |
 | Pollinations | ✅ | ✅ |
+| AIFree | ❌ | ✅ partial |
 | TalkAI | ❌ | ❌ |
-| Dolphin AI | ❌ | ❌ |
-| AIFree | ❌ | ✅ (partial) |
+| Dolphin | ❌ | ❌ |
 | Toolbaz | ❌ | ❌ |
 
-If you're building a multi-turn chatbot, prefer models routed through DeepAI or Pollinations. Check `text_models_by_provider` in the `/models` response to see which provider handles which model.
+Use `text_models_by_provider` to determine which provider handles a given model before building a stateful chat.
 
 ---
 
-## Image models
+## Dynamic Model Selection
 
-Image models are static and don't change between deploys. Use `/models?type=image` for the current list.
-
-The `preference` parameter (`speed` / `quality`) is only respected by the `hd` model (DeepAI). All Pollinations image models ignore it.
-
----
-
-## Using a specific model
-
-Pass `model` in your request body (or query string for GET endpoints):
-
-```javascript
-// /query
-fetch('/query', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ prompt: 'Hello', model: 'pol-openai-fast' })
-});
-
-// /chat
-fetch('/chat', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    model: 'pol-openai-fast',
-    messages: [{ role: 'user', content: 'Hello' }]
-  })
-});
-
-// /image
-fetch('/image', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ prompt: 'a red fox', model: 'flux' })
-});
-```
-
-If the model you pass is disabled or unrecognised, routing falls back to the Toolbaz provider. If Toolbaz is also disabled, the request will fail with a `502`.
-
----
-
-## Dynamic model selection example
-
-```javascript
-async function getBestModel(preferredProvider = null) {
-  const { text_models_by_provider, defaults } = await fetch(
-    'https://vexa-ai.pages.dev/models'
-  ).then(r => r.json());
-
-  if (preferredProvider && text_models_by_provider[preferredProvider]?.length) {
-    return text_models_by_provider[preferredProvider][0].name;
-  }
-
+```js
+async function getDefaultModel() {
+  const { defaults } = await fetch("https://vexa-ai.pages.dev/models").then(r => r.json());
   return defaults.text;
+}
+
+async function getFirstModelFromProvider(providerName) {
+  const { text_models_by_provider } = await fetch("https://vexa-ai.pages.dev/models").then(r => r.json());
+  return text_models_by_provider[providerName]?.[0]?.name ?? null;
 }
 ```

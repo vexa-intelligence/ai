@@ -1,6 +1,6 @@
-import { proxyCache } from "./image.js";
+import { getProxyUrl } from "../lib/crypto.js";
 
-export async function onRequest({ request }) {
+export async function onRequest({ request, env }) {
     if (request.method === "OPTIONS") {
         return new Response(null, {
             status: 204,
@@ -26,7 +26,7 @@ export async function onRequest({ request }) {
             headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
         });
     }
-    const upstreamUrl = proxyCache.get(id);
+    const upstreamUrl = await getProxyUrl(id, env);
     if (!upstreamUrl) {
         return new Response(JSON.stringify({ success: false, error: "Proxy ID not found or expired" }), {
             status: 404,

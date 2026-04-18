@@ -1,6 +1,11 @@
 name = "vexa-ai"
-main = "functions/index.js"
+main = "_worker.js"
 compatibility_date = "2026-04-16"
+
+[[kv_namespaces]]
+binding = "PROXY_CACHE"
+id = "66ede2a8bb6640e88c8c3301b780051"
+preview_id = "451c1c18a54b4cc6b1f40d7"
 
 [env.development]
 name = "vexa-ai-dev"
