@@ -178,10 +178,6 @@ export function unescapeHtml(str) {
     return str.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#039;/g, "'");
 }
 
-export function cleanText(text) {
-    return text.replace(/\s+/g, ' ').trim();
-}
-
 export function labelToKey(label) {
     return label
         .toLowerCase()
@@ -375,39 +371,7 @@ export async function dolphinComplete(prompt, model) {
     return full.trim();
 }
 
-export async function talkaiComplete(prompt, model) {
-    const modelId = TALKAI_MODEL_IDS[model] || model;
-    const messages = [{ id: "0", from: "you", content: prompt, model: "" }];
-    const payload = { type: "chat", messagesHistory: messages, settings: { model: modelId, temperature: TEMPERATURE_SETTINGS.DEFAULT } };
-    const r = await fetch(TALKAI_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "User-Agent": UA, "Referer": "https://talkai.info/", "Origin": "https://talkai.info" },
-        body: JSON.stringify(payload),
-    });
-    if (!r.ok) throw new Error(`TalkAI error ${r.status}`);
-    const reader = r.body.getReader();
-    const decoder = new TextDecoder();
-    let full = "";
-    let buf = "";
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const lines = buf.split("\n");
-        buf = lines.pop();
-        for (const line of lines) {
-            if (!line.startsWith("data:")) continue;
-            const data = line.slice(5).trim();
-            if (!data || data === "[DONE]") continue;
-            full += data + " ";
-        }
-    }
-    if (buf.trim().startsWith("data:")) {
-        const data = buf.trim().slice(5).trim();
-        if (data && data !== "[DONE]") full += data + " ";
-    }
-    return cleanText(full.trim());
-}
+
 
 export function resolveSource(model) {
     if (TALKAI_MODELS.has(model)) return "talkai.info";
@@ -716,7 +680,16 @@ export async function dolphinCompleteStream(prompt, model, onChunk) {
     }
 }
 
-export async function talkaiCompleteStream(prompt, model, onChunk) {
+export function cleanText(text) {
+    let cleaned = text.replace(/\\n\\n/g, ' ').replace(/\\n/g, ' ').replace(/\n\n/g, ' ').replace(/\n/g, ' ');
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    cleaned = cleaned.replace(/^(Claude \d+(\.\d+)?\s+(Sonnet|Haiku|Opus)|GPT-\d+(\.\d+)?|Gemini \w+)\s+/i, '');
+    cleaned = cleaned.replace(/\s*-\d+$/, '');
+
+    return cleaned;
+}
+
+export async function talkaiComplete(prompt, model) {
     const modelId = TALKAI_MODEL_IDS[model] || model;
     const messages = [{ id: "0", from: "you", content: prompt, model: "" }];
     const payload = { type: "chat", messagesHistory: messages, settings: { model: modelId, temperature: TEMPERATURE_SETTINGS.DEFAULT } };
@@ -726,30 +699,39 @@ export async function talkaiCompleteStream(prompt, model, onChunk) {
         body: JSON.stringify(payload),
     });
     if (!r.ok) throw new Error(`TalkAI error ${r.status}`);
-
     const reader = r.body.getReader();
     const decoder = new TextDecoder();
+    let full = "";
     let buf = "";
-
+    let skipNext = false;
     while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         buf += decoder.decode(value, { stream: true });
         const lines = buf.split("\n");
         buf = lines.pop();
-
         for (const line of lines) {
+            if (line.startsWith("event:")) { skipNext = true; continue; }
             if (!line.startsWith("data:")) continue;
-            const data = line.slice(5).trim();
-            if (!data || data === "[DONE]") continue;
-            onChunk(data + " ");
+            if (skipNext) { skipNext = false; continue; }
+            const data = line.slice(5);
+            if (!data.trim() || data.trim() === "[DONE]") continue;
+            full += data;
         }
     }
+    if (buf.startsWith("data:") && !skipNext) {
+        const data = buf.slice(5);
+        if (data.trim() && data.trim() !== "[DONE]") full += data;
+    }
+    return cleanText(full.replace(/An internal server error occurred\.?/gi, "").trim());
+}
 
-    if (buf.trim().startsWith("data:")) {
-        const data = buf.trim().slice(5).trim();
-        if (data && data !== "[DONE]") onChunk(data + " ");
+export async function talkaiCompleteStream(prompt, model, onChunk) {
+    const fullText = await talkaiComplete(prompt, model);
+    const chunks = fullText.match(/.{1,4}/g) || [];
+    for (const chunk of chunks) {
+        onChunk(chunk);
+        await new Promise(r => setTimeout(r, 10));
     }
 }
 
