@@ -1,135 +1,161 @@
-![Vexa Banner](/images/banner.png)
+![Banner](/public/assets/banner.png)
 
-# Vexa AI
+# Vexa AI API
 
-Free REST API for text and image generation. No account, no API key, no setup.
+[![License](https://img.shields.io/badge/license-CC_BY_NC_4.0-blue.svg)](LICENSE)
+[![GitHub](https://img.shields.io/badge/github-vexa--intelligence%2Fai-informational.svg)](https://github.com/vexa-intelligence/ai)
+[![Live API](https://img.shields.io/badge/api-live-brightgreen.svg)](https://vexa-ai.pages.dev)
 
-- **Text** — Multiple AI models via Toolbaz, DeepAI, AIFreeForever, and Pollinations
-- **Images** — HD (DeepAI) + Pollinations models (Flux, Turbo, Kontext, Seedream, Nano Banana), proxied (no direct image URLs exposed)
+A multi-provider AI service offering text generation, image generation, and model management through a unified API. Vexa AI aggregates multiple AI providers to give you access to cutting-edge models without managing multiple API keys.
 
+## **Features**
+
+- **Multi-Provider Support**: Access models from DeepAI, Pollinations, TalkAI, Dolphin AI, and more
+- **Text Generation**: Chat completion and simple prompt generation with conversation history
+- **Image Generation**: Create images from text prompts using various models
+- **Streaming Support**: Real-time streaming responses for chat completions
+- **Health Monitoring**: Built-in health checks and model availability monitoring
+- **No API Keys Required**: Free tier available with rate limiting
+- **CORS Enabled**: Ready for web application integration
+
+## **Quick Start**
+
+### **Base URL**
 ```
-BASE_URL = https://vexa-ai.pages.dev
+https://vexa-ai.pages.dev
 ```
 
----
-
-## Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/` | API documentation as JSON |
-| `GET` | `/models` | All text + image models |
-| `GET POST` | `/query` | Single prompt → response |
-| `POST` | `/chat` | Multi-turn conversation (OpenAI-style messages array) |
-| `GET POST` | `/image` | Generate images |
-| `GET` | `/image/proxy/:id` | Proxied image delivery — never exposes origin URL |
-| `GET` | `/health` | Live status of all models and upstreams |
-
----
-
-## Quick Start
-
+### **Simple Chat Example**
 ```bash
-# Ask a question
-curl "/query?q=What+is+a+black+hole"
-
-# With a specific model
-curl "/query?q=Hello&model=vexa"
-
-# Multi-turn chat
-curl -X POST /chat \
+curl -X POST https://vexa-ai.pages.dev/chat \
   -H "Content-Type: application/json" \
-  -d '{"messages": [{"role": "user", "content": "Hello!"}]}'
-
-# Multi-turn chat with streaming
-curl -X POST /chat \
-  -H "Content-Type: application/json" \
-  -d '{"messages": [{"role": "user", "content": "Hello!"}], "stream": true}' \
-  --no-buffer
-
-# Generate an image (default: HD model, speed preference)
-curl "/image?q=a+red+fox+in+a+neon+city"
-
-# Generate with specific model
-curl "/image?q=a+castle&model=hd"
-
-# Generate with quality preference (HD only)
-curl "/image?q=a+castle&preference=quality"
-
-# List all models
-curl "/models"
-
-# Check system health
-curl "/health"
+  -d '{
+    "model": "vexa",
+    "messages": [
+      {"role": "user", "content": "Hello, how are you?"}
+    ]
+  }'
 ```
 
----
+### **Image Generation Example**
+```bash
+curl "https://vexa-ai.pages.dev/image?q=a cat sitting on a table"
+```
 
-## Docs
+## **Available Endpoints**
 
-- [Core →](./CORE.md)
-- [Models →](./MODELS.md)
-- [Query →](./query.md)
-- [Chat →](./chat.md)
-- [Image →](./image.md)
-- [Health →](./health.md)
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | API documentation and information |
+| `/chat` | POST | Chat completion with conversation history |
+| `/query` | GET/POST | Simple single-prompt text generation |
+| `/image` | GET/POST | Generate images from text prompts |
+| `/image/proxy/:id` | GET | Proxy for serving generated images |
+| `/models` | GET | List available AI models and their status |
+| `/health` | GET | System health check and service status |
 
----
+*For real-time endpoint information, visit: `https://vexa-ai.pages.dev/`*
 
-## Caching
+## **Documentation**
 
-In-memory per serverless instance, resets on cold starts.
+For detailed API documentation, examples, and configuration options, visit our [DOCUMENTATION](./DOCUMENTATION/) folder:
 
----
+- [API Endpoints](./DOCUMENTATION/endpoints.md) - Detailed endpoint documentation
+- [Models](./DOCUMENTATION/models.md) - Available AI models and their capabilities
+- [Providers](./DOCUMENTATION/providers.md) - Supported AI providers
+- [Configuration](./DOCUMENTATION/configuration.md) - Configuration options and settings
+- [Quick Start](./DOCUMENTATION/quick-start.md) - Getting started guide
 
-## Errors
+## **Usage Examples**
+
+### **Streaming Chat**
+```javascript
+const response = await fetch('https://vexa-ai.pages.dev/chat', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    model: 'vexa',
+    messages: [
+      { role: 'user', content: 'Tell me a story' }
+    ],
+    stream: true
+  })
+});
+
+const reader = response.body.getReader();
+const decoder = new TextDecoder();
+
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+  
+  const chunk = decoder.decode(value);
+  console.log(chunk);
+}
+```
+
+### **Image Generation with POST**
+```javascript
+const response = await fetch('https://vexa-ai.pages.dev/image', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    prompt: 'A beautiful sunset over mountains',
+    model: 'flux',
+    preference: 'quality'
+  })
+});
+
+const result = await response.json();
+console.log('Image URL:', result.proxy_url);
+```
+
+## **Default Models**
+
+*Current defaults are available via the `/models` endpoint:*
+```bash
+curl "https://vexa-ai.pages.dev/models"
+```
+
+This returns the current default text model, image model, and preferences configured in the system.
+
+## **Rate Limits**
+
+- Requests are limited per IP address
+- No authentication required for basic usage
+- Consider implementing caching for better performance
+
+## **Error Handling**
+
+All endpoints return consistent error responses:
 
 ```json
-{ "success": false, "error": "description" }
+{
+  "success": false,
+  "error": "Error message",
+  "detail": "Detailed error information"
+}
 ```
 
-| Status | Meaning |
-|--------|---------|
-| `400` | Bad request — missing or invalid parameters |
-| `429` | Rate limit exceeded |
-| `502` | Upstream service failed |
-| `500` | Internal server error |
+## **Health Monitoring
 
----
-
-## Project Structure
-
-```
-functions/
-├── _worker.js        # Main worker — routes requests to handlers (entry point)
-├── core.js           # Shared constants, model definitions, utilities
-├── index.js          # GET / - API documentation
-├── query.js          # GET POST /query
-├── chat.js           # POST /chat
-├── models.js         # GET /models
-├── health.js         # GET /health
-├── image.js          # GET POST /image
-├── image/
-│   └── proxy/
-│       └── [[id]].js # GET /image/proxy/:id — proxied image delivery
-└── 404.js            # Fallback 404 handler
-wrangler.toml         # Cloudflare Pages config
-```
-
-## Deploy
+Check the system status:
 
 ```bash
-git clone https://github.com/vexa-intelligence/ai
-npm i -g wrangler
-wrangler pages deploy .
+curl https://vexa-ai.pages.dev/health
 ```
 
-## Run Locally
+## **GitHub Repository**
 
-```bash
-npm i -g wrangler
-wrangler pages dev .
-# → http://127.0.0.1:8788
-```
+Find the source code and contribute at:
+[https://github.com/vexa-intelligence/ai](https://github.com/vexa-intelligence/ai)
 
-No dependencies required — pure JavaScript with Cloudflare Pages Functions.
+## **License**
+
+This project is licensed under the CC BY-NC 4.0 License - see the [LICENSE](LICENSE) file for details.
+
+## **Support**
+
+For issues, feature requests, or questions:
+- Open an issue on [GitHub](https://github.com/vexa-intelligence/ai/issues)
+- Check the [API documentation](./DOCUMENTATION/) for detailed information

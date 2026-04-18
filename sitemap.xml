@@ -1,39 +1,282 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  
   <url>
     <loc>https://vexa-ai.pages.dev/</loc>
-    <lastmod>2026-03-31</lastmod>
+    <lastmod>2026-04-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://vexa-ai.pages.dev/images/banner.png</image:loc>
+      <image:title>Vexa AI API - Multi-Provider AI Service</image:title>
+      <image:caption>Comprehensive AI API offering text generation, image generation, and model management</image:caption>
+    </image:image>
   </url>
-  <url>
-    <loc>https://vexa-ai.pages.dev/models</loc>
-    <lastmod>2026-03-31</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://vexa-ai.pages.dev/query</loc>
-    <lastmod>2026-03-31</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
+  
   <url>
     <loc>https://vexa-ai.pages.dev/chat</loc>
-    <lastmod>2026-03-31</lastmod>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <url>
+    <loc>https://vexa-ai.pages.dev/query</loc>
+    <lastmod>2026-04-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
+  
   <url>
     <loc>https://vexa-ai.pages.dev/image</loc>
-    <lastmod>2026-03-31</lastmod>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <url>
+    <loc>https://vexa-ai.pages.dev/models</loc>
+    <lastmod>2026-04-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
+  
   <url>
     <loc>https://vexa-ai.pages.dev/health</loc>
-    <lastmod>2026-03-31</lastmod>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <url>
+    <loc>https://vexa-ai.pages.dev/models?details=true</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://vexa-ai.pages.dev/models?type=text</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://vexa-ai.pages.dev/models?type=image</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://vexa-ai.pages.dev/health?skip_models=true</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <!-- Documentation Pages -->
+  <url>
+    <loc>https://vexa-ai.pages.dev/DOCUMENTATION/</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <url>
+    <loc>https://vexa-ai.pages.dev/DOCUMENTATION/endpoints.md</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <url>
+    <loc>https://vexa-ai.pages.dev/DOCUMENTATION/models.md</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <url>
+    <loc>https://vexa-ai.pages.dev/DOCUMENTATION/providers.md</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <url>
+    <loc>https://vexa-ai.pages.dev/DOCUMENTATION/configuration.md</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://vexa-ai.pages.dev/DOCUMENTATION/quick-start.md</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- README and Project Info -->
+  <url>
+    <loc>https://vexa-ai.pages.dev/README.md</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <url>
+    <loc>https://vexa-ai.pages.dev/LICENSE</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  
+  <url>
+    <loc>https://vexa-ai.pages.dev/manifest.json</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <!-- GitHub Repository Links -->
+  <url>
+    <loc>https://github.com/vexa-intelligence/ai</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <url>
+    <loc>https://github.com/vexa-intelligence/ai/blob/main/README.md</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://github.com/vexa-intelligence/ai/blob/main/LICENSE</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  
+  <!-- API Examples and Use Cases -->
+  <url>
+    <loc>https://vexa-ai.pages.dev/?format=html</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://vexa-ai.pages.dev/?examples=false</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <!-- Static Assets -->
+  <url>
+    <loc>https://vexa-ai.pages.dev/favicon.ico</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  
+  <url>
+    <loc>https://vexa-ai.pages.dev/robots.txt</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  
+  <url>
+    <loc>https://vexa-ai.pages.dev/.ascii</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  
+  <!-- Images and Media -->
+  <url>
+    <loc>https://vexa-ai.pages.dev/images/</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+    <image:image>
+      <image:loc>https://vexa-ai.pages.dev/images/banner.png</image:loc>
+      <image:title>Vexa AI Banner</image:title>
+      <image:caption>Main banner image for Vexa AI API</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://vexa-ai.pages.dev/images/icon.png</image:loc>
+      <image:title>Vexa AI Icon</image:title>
+      <image:caption>Icon for Vexa AI API service</image:caption>
+    </image:image>
+  </url>
+  
+  <!-- Configuration and Deployment -->
+  <url>
+    <loc>https://vexa-ai.pages.dev/wrangler.toml</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  
+  <url>
+    <loc>https://vexa-ai.pages.dev/requirements.txt</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  
+  <!-- API Health and Monitoring -->
+  <url>
+    <loc>https://vexa-ai.pages.dev/health?format=json</loc>
+    <lastmod>2026-04-17</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.6</priority>
   </url>
+  
+  <!-- Specialized Endpoints -->
+  <url>
+    <loc>https://vexa-ai.pages.dev/image/proxy</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <!-- API Documentation Variants -->
+  <url>
+    <loc>https://vexa-ai.pages.dev/?format=json</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Source Code Structure -->
+  <url>
+    <loc>https://vexa-ai.pages.dev/functions/</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <url>
+    <loc>https://vexa-ai.pages.dev/lib/</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <url>
+    <loc>https://vexa-ai.pages.dev/providers/</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
 </urlset>

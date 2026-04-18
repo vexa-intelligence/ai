@@ -1,7 +1,201 @@
-User-agent: *
-Allow: /
+# Vexa AI API - Robots.txt
+# Multi-provider AI service offering text generation, image generation, and model management
 
+# Global directives
+User-agent: *
+Crawl-delay: 1
+
+# Allow all core content
+Allow: /
+Allow: /api
+Allow: /functions
+Allow: /lib
+Allow: /providers
+Allow: /DOCUMENTATION
+Allow: /images
+
+# API endpoints - allow crawling for documentation purposes
+Allow: /chat
+Allow: /query
+Allow: /image
+Allow: /models
+Allow: /health
+Allow: /image/proxy
+
+# API parameter variants
+Allow: /*?*
+Allow: /models?details=true
+Allow: /models?type=text
+Allow: /models?type=image
+Allow: /health?skip_models=true
+Allow: /?format=json
+Allow: /?format=html
+Allow: /?examples=false
+
+# Documentation files
+Allow: /README.md
+Allow: /LICENSE
+Allow: /manifest.json
+Allow: /wrangler.toml
+Allow: /robots.txt
+Allow: /sitemap.xml
+
+# Static assets
+Allow: /favicon.ico
+Allow: /.ascii
+Allow: /images/banner.png
+Allow: /images/icon.png
+
+# Disallow sensitive or unnecessary paths
+Disallow: /image/proxy/*/
+Disallow: /_private
+Disallow: /_internal
+Disallow: /admin
+Disallow: /.git
+Disallow: /.gitignore
+Disallow: /node_modules
+Disallow: /package-lock.json
+Disallow: /yarn.lock
+Disallow: /.env
+Disallow: /.env.*
+Disallow: /config/secrets
+Disallow: /logs
+Disallow: /tmp
+Disallow: /cache
+
+# Disallow development and testing paths
+Disallow: /test
+Disallow: /tests
+Disallow: /spec
+Disallow: /coverage
+Disallow: /.nyc_output
+Disallow: /dist
+Disallow: /build
+
+# Disallow backup and temporary files
+Disallow: /*.bak
+Disallow: /*.backup
+Disallow: /*.tmp
+Disallow: /*.temp
+Disallow: /*.swp
+Disallow: /*.swo
+Disallow: /*.log
+Disallow: /*.error
+
+# Specific user agents
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0.5
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Slurp
+Allow: /
+Crawl-delay: 1
+
+User-agent: DuckDuckBot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Baiduspider
+Allow: /
+Crawl-delay: 2
+
+User-agent: YandexBot
+Allow: /
+Crawl-delay: 1
+
+# Social media crawlers
+User-agent: facebookexternalhit
+Allow: /
+Allow: /DOCUMENTATION/
+Allow: /README.md
+
+User-agent: TwitterBot
+Allow: /
+Allow: /DOCUMENTATION/
+Allow: /README.md
+
+User-agent: LinkedInBot
+Allow: /
+Allow: /DOCUMENTATION/
+Allow: /README.md
+
+# AI and research crawlers
+User-agent: GPTBot
+Allow: /DOCUMENTATION/
+Allow: /README.md
+Disallow: /
+
+User-agent: ChatGPT-User
+Allow: /DOCUMENTATION/
+Allow: /README.md
+Disallow: /
+
+User-agent: Google-Extended
+Allow: /DOCUMENTATION/
+Allow: /README.md
+Disallow: /
+
+User-agent: anthropic-ai
+Allow: /DOCUMENTATION/
+Allow: /README.md
+Disallow: /
+
+User-agent: Claude-Web
+Allow: /DOCUMENTATION/
+Allow: /README.md
+Disallow: /
+
+# Disallow aggressive crawlers
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: BLEXBot
+Disallow: /
+
+User-agent: BacklinkCrawler
+Disallow: /
+
+# Archive and monitoring crawlers
+User-agent: ia_archiver
+Allow: /DOCUMENTATION/
+Allow: /README.md
+Disallow: /
+
+User-agent: archive.org_bot
+Allow: /DOCUMENTATION/
+Allow: /README.md
+Disallow: /
+
+User-agent: UptimeRobot
+Allow: /health
+Disallow: /
+
+User-agent: Pingdom
+Allow: /health
+Disallow: /
+
+# Sitemap locations
 Sitemap: https://vexa-ai.pages.dev/sitemap.xml
+Sitemap: https://vexa-ai.pages.dev/sitemap.xml?format=xml
+
+# Additional sitemaps for different sections (if available)
+# Sitemap: https://vexa-ai.pages.dev/sitemap-api.xml
+# Sitemap: https://vexa-ai.pages.dev/sitemap-docs.xml
+
+# Host directive (for Yandex)
+Host: https://vexa-ai.pages.dev
+
+# End of robots.txt
 
                     .=%@@@@@@@@@#+-..                          
                   .-%@@@@@@@@@@@@@@@@#+:.                      

@@ -1,52 +1,178 @@
-import {
-    corsHeaders, fetchAvailableModels, checkModel, checkPage, checkToken, checkImage,
-    getEnabledPriorityModels, HEALTH_SETTINGS,
-} from "./core.js";
+import { corsHeaders } from "../lib/utils.js";
+import { getAllEnabledModels } from "../lib/models.js";
+import { checkModel } from "../lib/ai.js";
+import { API_URLS, HEALTH_SETTINGS, MODEL_SETS, PROVIDER_SETTINGS } from "../config.js";
 
-const MAX_MODELS_TO_CHECK = HEALTH_SETTINGS.MAX_MODELS_TO_CHECK;
+const { TOOLBAZ_PAGE_URL, TOKEN_URL, DEEPAI_IMAGE_URL } = API_URLS;
+const { MAX_MODELS_TO_CHECK } = HEALTH_SETTINGS;
+
+async function checkPageReachability() {
+    const t0 = Date.now();
+    try {
+        const response = await fetch(TOOLBAZ_PAGE_URL, {
+            method: "HEAD",
+            headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" }
+        });
+        return {
+            reachable: response.ok,
+            status_code: response.status,
+            latency_ms: Date.now() - t0
+        };
+    } catch (error) {
+        return {
+            reachable: false,
+            error: error.message,
+            latency_ms: Date.now() - t0
+        };
+    }
+}
+
+async function checkTokenEndpoint() {
+    const t0 = Date.now();
+    try {
+        const response = await fetch(TOKEN_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            },
+            body: "action=get_token"
+        });
+        const text = await response.text();
+        return {
+            reachable: response.ok,
+            token_received: response.ok && text.length > 0,
+            status_code: response.status,
+            latency_ms: Date.now() - t0
+        };
+    } catch (error) {
+        return {
+            reachable: false,
+            error: error.message,
+            latency_ms: Date.now() - t0
+        };
+    }
+}
+
+async function checkImageEndpoint() {
+    const t0 = Date.now();
+    try {
+        const response = await fetch(DEEPAI_IMAGE_URL, {
+            method: "HEAD",
+            headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" }
+        });
+        return {
+            reachable: true,
+            status_code: response.status,
+            latency_ms: Date.now() - t0
+        };
+    } catch (error) {
+        return {
+            reachable: false,
+            error: error.message,
+            latency_ms: Date.now() - t0
+        };
+    }
+}
 
 export async function onRequest({ request }) {
     if (request.method === "OPTIONS") {
-        return new Response(null, { status: 204, headers: corsHeaders() });
+        return new Response(null, { status: 204, headers: corsHeaders("GET, OPTIONS") });
     }
+
     if (request.method !== "GET") {
-        return Response.json({ success: false, error: "Method not allowed" }, { status: 405, headers: corsHeaders() });
-    }
-    const tStart = Date.now();
-    const scrapedModels = await fetchAvailableModels();
-    const filteredPriorityModels = getEnabledPriorityModels();
-
-    const prioritySet = new Set(filteredPriorityModels);
-    const additionalModels = scrapedModels
-        .filter(m => !prioritySet.has(m))
-        .slice(0, Math.max(0, MAX_MODELS_TO_CHECK - filteredPriorityModels.length));
-    const allModels = [...filteredPriorityModels, ...additionalModels, ...scrapedModels.filter(m => !prioritySet.has(m) && !additionalModels.includes(m))];
-    const modelsToCheck = allModels.slice(0, MAX_MODELS_TO_CHECK);
-
-    const [page, token, image, ...modelResults] = await Promise.all([
-        checkPage(),
-        checkToken(),
-        checkImage(),
-        ...modelsToCheck.map(m => checkModel(m)),
-    ]);
-
-    const models = {};
-    for (let i = 0; i < modelsToCheck.length; i++) {
-        models[modelsToCheck[i]] = modelResults[i];
-    }
-    for (const m of allModels.slice(MAX_MODELS_TO_CHECK)) {
-        models[m] = { ok: null, error: "Skipped - too many models", latency_ms: 0 };
+        return Response.json({
+            success: false,
+            error: "Method not allowed"
+        }, { status: 405, headers: corsHeaders("GET, OPTIONS") });
     }
 
-    const failedModels = modelsToCheck.filter(m => !models[m]?.ok);
-    const overall = page.reachable && token.reachable && token.token_received && image.reachable && failedModels.length === 0;
+    const startTime = Date.now();
+    const url = new URL(request.url);
+    const skipModels = url.searchParams.get("skip_models") === "true";
 
-    return Response.json({
-        success: true,
-        status: overall ? "ok" : "degraded",
-        timestamp: Math.floor(Date.now() / 1000),
-        total_ms: Date.now() - tStart,
-        checks: { page, token, image, models },
-        ...(failedModels.length > 0 && { failed_models: failedModels }),
-    }, { status: 200, headers: corsHeaders() });
+    try {
+        const [pageCheck, tokenCheck, imageCheck] = await Promise.all([
+            checkPageReachability(),
+            checkTokenEndpoint(),
+            checkImageEndpoint()
+        ]);
+
+        const checks = {
+            page: pageCheck,
+            token: tokenCheck,
+            image: imageCheck
+        };
+
+        let modelChecks = {};
+        let failedModels = [];
+
+        if (!skipModels) {
+            const allModels = await getAllEnabledModels();
+            const textModelKeys = Object.keys(allModels.textModels);
+            const modelsToCheck = textModelKeys.slice(0, MAX_MODELS_TO_CHECK);
+
+            const modelPromises = modelsToCheck.map(async (model) => {
+                const result = await checkModel(model);
+                return { model, result };
+            });
+
+            const modelResults = await Promise.all(modelPromises);
+
+            modelChecks = {};
+            failedModels = [];
+
+            for (const { model, result } of modelResults) {
+                modelChecks[model] = {
+                    ok: result.ok,
+                    latency_ms: result.latency_ms
+                };
+
+                if (!result.ok) {
+                    modelChecks[model].error = result.error;
+                    failedModels.push(model);
+                }
+            }
+
+            if (textModelKeys.length > MAX_MODELS_TO_CHECK) {
+                const skippedCount = textModelKeys.length - MAX_MODELS_TO_CHECK;
+                modelChecks._skipped = {
+                    count: skippedCount,
+                    note: `Only first ${MAX_MODELS_TO_CHECK} models checked to prevent timeout`
+                };
+            }
+        }
+
+        checks.models = modelChecks;
+
+        const allChecksPassed = pageCheck.reachable &&
+            tokenCheck.reachable &&
+            imageCheck.reachable &&
+            failedModels.length === 0;
+
+        const response = {
+            success: true,
+            status: allChecksPassed ? "ok" : "degraded",
+            timestamp: Math.floor(Date.now() / 1000),
+            total_ms: Date.now() - startTime,
+            checks
+        };
+
+        if (failedModels.length > 0) {
+            response.failed_models = failedModels;
+        }
+
+        return Response.json(response, {
+            status: 200,
+            headers: corsHeaders("GET, OPTIONS")
+        });
+
+    } catch (error) {
+        return Response.json({
+            success: false,
+            error: "Health check failed",
+            detail: error.message,
+            total_ms: Date.now() - startTime
+        }, { status: 500, headers: corsHeaders("GET, OPTIONS") });
+    }
 }

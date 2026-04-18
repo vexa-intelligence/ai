@@ -1,7 +1,10 @@
-import {
-    corsHeaders, proxyCache, DEFAULT_IMAGE_MODEL, DEFAULT_IMAGE_PREFERENCE, resolveImageSource,
-    generateImage, makeProxyId,
-} from "./core.js";
+import { DEFAULT_IMAGE_MODEL, DEFAULT_IMAGE_PREFERENCE } from "../config.js";
+import { corsHeaders } from "../lib/utils.js";
+import { resolveImageSource } from "../lib/models.js";
+import { generateImage } from "../lib/ai.js";
+import { proxyCache, makeProxyId } from "../lib/crypto.js";
+
+export { proxyCache };
 
 function parseGet(url) {
     const sp = url.searchParams;
@@ -47,8 +50,6 @@ async function run(args, baseUrl) {
         elapsed_ms: Date.now() - t0,
     }, { status: 200, headers: corsHeaders() });
 }
-
-export { proxyCache };
 
 export async function onRequest({ request }) {
     if (request.method === "OPTIONS") {

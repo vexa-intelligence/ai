@@ -1,7 +1,6 @@
-import {
-    DEFAULT_MODEL,
-    corsHeaders, completeWithAI, corsHeadersStream, completeWithAIStream,
-} from "./core.js";
+import { DEFAULT_MODEL } from "../config.js";
+import { corsHeaders, corsHeadersStream } from "../lib/utils.js";
+import { completeWithAIStream } from "../lib/ai.js";
 
 const MAX_MESSAGES = 100;
 const MAX_CONTENT_LENGTH = 32000;
@@ -12,7 +11,6 @@ function validateMessages(messages) {
         return "Missing or empty 'messages' array";
     if (messages.length > MAX_MESSAGES)
         return `Too many messages: max is ${MAX_MESSAGES}`;
-
     let totalChars = 0;
     for (let i = 0; i < messages.length; i++) {
         const msg = messages[i];
@@ -26,12 +24,10 @@ function validateMessages(messages) {
             return `messages[${i}].content exceeds max length of ${MAX_CONTENT_LENGTH}`;
         totalChars += msg.content.length;
     }
-
     if (totalChars > MAX_TOTAL_CHARS)
         return `Total message content exceeds max of ${MAX_TOTAL_CHARS} characters`;
     if (!messages.some(m => m.role === "user"))
         return "At least one message with role 'user' is required";
-
     return null;
 }
 
@@ -64,52 +60,37 @@ export async function onRequest({ request }) {
     if (request.method !== "POST") {
         return Response.json({ success: false, error: "Method not allowed" }, { status: 405, headers: corsHeaders("POST, OPTIONS") });
     }
-
     let body;
     try { body = await request.json(); }
     catch (_) { return Response.json({ success: false, error: "Invalid JSON body" }, { status: 400, headers: corsHeaders("POST, OPTIONS") }); }
-
     const validationError = validateMessages(body.messages);
     if (validationError) {
         return Response.json({ success: false, error: validationError }, { status: 400, headers: corsHeaders("POST, OPTIONS") });
     }
-
     const messages = body.messages;
     const model = body.model || DEFAULT_MODEL;
-    const stream = body.stream === true;
     const lastUserMsg = messages.filter(m => m.role === "user").at(-1).content;
+    const t0 = Date.now();
+    const totalChars = messages.reduce((sum, m) => sum + m.content.length, 0);
 
     try {
-        if (stream) {
-            const encoder = new TextEncoder();
-            const readable = new ReadableStream({
-                async start(controller) {
-                    try {
-                        await completeWithAIStream(lastUserMsg, messages, model, (chunk) => {
-                            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: chunk }, finish_reason: null }] })}\n\n`));
-                        });
-                        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }] })}\n\n`));
-                        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-                    } catch (error) {
-                        controller.enqueue(encoder.encode(sseError(error.message)));
-                    } finally {
-                        controller.close();
-                    }
+        const encoder = new TextEncoder();
+        const readable = new ReadableStream({
+            async start(controller) {
+                try {
+                    await completeWithAIStream(lastUserMsg, messages, model, (chunk) => {
+                        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: chunk }, finish_reason: null }] })}\n\n`));
+                    });
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }] })}\n\n`));
+                    controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+                } catch (error) {
+                    controller.enqueue(encoder.encode(sseError(error.message)));
+                } finally {
+                    controller.close();
                 }
-            });
-            return new Response(readable, { status: 200, headers: corsHeadersStream() });
-        }
-
-        const t0 = Date.now();
-        const text = await completeWithAI(lastUserMsg, messages, model);
-        const totalChars = messages.reduce((sum, m) => sum + m.content.length, 0);
-        return Response.json({
-            success: true,
-            message: { role: "assistant", content: text },
-            model,
-            elapsed_ms: Date.now() - t0,
-            prompt_chars: totalChars,
-        }, { status: 200, headers: corsHeaders("POST, OPTIONS") });
+            }
+        });
+        return new Response(readable, { status: 200, headers: corsHeadersStream() });
     } catch (e) {
         return Response.json({ success: false, error: `Upstream request failed: ${e.message}` }, { status: 502, headers: corsHeaders("POST, OPTIONS") });
     }
