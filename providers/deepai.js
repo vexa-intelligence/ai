@@ -4,7 +4,7 @@ import { registerProvider } from "../lib/models.js";
 
 const { DEEPAI_API, DEEPAI_IMAGE_URL, DEEPAI_CHAT_URL } = API_URLS;
 
-export async function vexaComplete(prompt, messages, model = "standard") {
+export async function vexaComplete(prompt, messages, model = null) {
     const apiKey = await generateImageKey();
     const sessionUuid = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
     const chatHistory = JSON.stringify(
@@ -41,16 +41,27 @@ export async function vexaComplete(prompt, messages, model = "standard") {
         if (chunk.includes("\u001c")) { full += chunk.split("\u001c")[0]; break; }
         full += chunk;
     }
-    return full.trim();
+
+    let actualModel = model;
+    try {
+        const modelMatch = full.match(/model[:\s]+([\w-]+)/i);
+        if (modelMatch) {
+            actualModel = modelMatch[1];
+        }
+    } catch (e) {
+    }
+
+    return { text: full.trim(), model: actualModel || model };
 }
 
 export async function vexaCompleteStream(prompt, messages, model, onChunk) {
-    const fullText = await vexaComplete(prompt, messages, model);
-    const chunks = fullText.match(/.{1,4}/g) || [];
+    const result = await vexaComplete(prompt, messages, model);
+    const chunks = result.text.match(/.{1,4}/g) || [];
     for (const chunk of chunks) {
-        onChunk(chunk);
+        onChunk(chunk, result.model);
         await new Promise(r => setTimeout(r, 10));
     }
+    return result;
 }
 
 export async function callDeepAIImage(prompt, modelVer, prefKey) {
@@ -86,8 +97,12 @@ async function scrapeModels() {
     for (const m of match[1].matchAll(/\{value:"([^"]+)"[^}]*locked:false/g)) {
         models.add(m[1]);
     }
-    models.add("vexa");
     return models;
+}
+
+export async function getDeepAIDefaultModel() {
+    const models = await scrapeModels();
+    return models.size > 0 ? Array.from(models)[0] : null;
 }
 
 const deepaiProvider = {

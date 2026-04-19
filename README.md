@@ -62,10 +62,10 @@ Text models are sourced from multiple upstream providers. Not all providers supp
 
 ## Docs
 
-- [chat.md](./chat.md) — `/chat` streaming endpoint
-- [query.md](./query.md) — `/query` single-turn endpoint
-- [image.md](./image.md) — `/image` and `/image/proxy/:id`
-- [models.md](./models.md) — model listing, filtering, provider breakdown
-- [health.md](./health.md) — health check endpoint
-- [configuration.md](./configuration.md) — server-side config reference
-- [quick-start.md](./quick-start.md) — code examples for JS, Python, and Node.js
+- [chat.md](./DOCUMENTATION/chat.md) — `/chat` streaming endpoint
+- [query.md](./DOCUMENTATION/query.md) — `/query` single-turn endpoint
+- [image.md](./DOCUMENTATION/image.md) — `/image` and `/image/proxy/:id`
+- [models.md](./DOCUMENTATION/models.md) — model listing, filtering, provider breakdown
+- [health.md](./DOCUMENTATION/health.md) — health check endpoint
+- [configuration.md](./DOCUMENTATION/configuration.md) — server-side config reference
+- [quick-start.md](./DOCUMENTATION/quick-start.md) — code examples for JS, Python, and Node.js

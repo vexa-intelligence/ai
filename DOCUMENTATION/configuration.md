@@ -53,7 +53,7 @@ Text models are scraped from upstream providers and cached in memory:
 
 ```js
 export const CACHE_SETTINGS = {
-  MODELS_CACHE_TTL: 300000  // 5 minutes in ms
+  MODELS_CACHE_TTL: 300000
 };
 ```
 

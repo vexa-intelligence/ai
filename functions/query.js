@@ -11,8 +11,9 @@ async function run(prompt, model) {
     if (!model) model = DEFAULT_MODEL;
     const t0 = Date.now();
     try {
-        const text = await completeWithAI(prompt, null, model);
-        return Response.json({ success: true, response: text, model, elapsed_ms: Date.now() - t0, source: resolveSource(model) }, { status: 200, headers: corsHeaders() });
+        const result = await completeWithAI(prompt, null, model);
+        const actualModel = result.model || model || "standard";
+        return Response.json({ success: true, response: result.text, model: actualModel, elapsed_ms: Date.now() - t0, source: resolveSource(actualModel) }, { status: 200, headers: corsHeaders() });
     } catch (e) {
         return Response.json({ success: false, error: "Upstream request failed", detail: e.message }, { status: 502, headers: corsHeaders() });
     }

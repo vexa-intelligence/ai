@@ -20,6 +20,15 @@ export default {
 
     if (path === "/" || path === "") {
       return handleIndex({ request, env, ctx });
+    } else if (path === "/favicon.ico") {
+      try {
+        const faviconResponse = await env.ASSETS.fetch(new Request(request.url));
+        if (faviconResponse.ok) {
+          return faviconResponse;
+        }
+      } catch (e) {
+      }
+      return new Response("", { status: 404 });
     } else if (path === "/chat") {
       return handleChat({ request, env, ctx });
     } else if (path === "/health") {

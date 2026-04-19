@@ -1,6 +1,7 @@
 import { DEFAULT_MODEL } from "../config.js";
 import { corsHeaders, corsHeadersStream } from "../lib/utils.js";
 import { completeWithAIStream } from "../lib/ai.js";
+import { resolveSource } from "../lib/models.js";
 
 const MAX_MESSAGES = 100;
 const MAX_CONTENT_LENGTH = 32000;
@@ -75,13 +76,22 @@ export async function onRequest({ request }) {
 
     try {
         const encoder = new TextEncoder();
+        let actualModel = model;
+        let fullResponse = "";
+
         const readable = new ReadableStream({
             async start(controller) {
                 try {
-                    await completeWithAIStream(lastUserMsg, messages, model, (chunk) => {
+                    await completeWithAIStream(lastUserMsg, messages, model, (chunk, chunkModel) => {
+                        fullResponse += chunk;
+                        if (chunkModel) actualModel = chunkModel;
                         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: chunk }, finish_reason: null }] })}\n\n`));
                     });
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }] })}\n\n`));
+
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                        choices: [{ delta: {}, finish_reason: "stop" }],
+                        metadata: { model: actualModel, source: resolveSource(actualModel) }
+                    })}\n\n`));
                     controller.enqueue(encoder.encode("data: [DONE]\n\n"));
                 } catch (error) {
                     controller.enqueue(encoder.encode(sseError(error.message)));
