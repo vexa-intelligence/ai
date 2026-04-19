@@ -6,8 +6,6 @@ import { API_URLS, HEALTH_SETTINGS, MODEL_SETS, PROVIDER_SETTINGS } from "../con
 const { TOOLBAZ_PAGE_URL, TOKEN_URL, DEEPAI_IMAGE_URL } = API_URLS;
 const { MAX_MODELS_TO_CHECK } = HEALTH_SETTINGS;
 
-const SKIP_HEALTH_PROVIDERS = new Set(["ChatGPTOrg"]);
-
 async function checkPageReachability() {
     const t0 = Date.now();
     try {
@@ -112,18 +110,7 @@ export async function onRequest({ request }) {
         if (!skipModels) {
             const allModels = await getAllEnabledModels();
             const textModelKeys = Object.keys(allModels.textModels);
-
-            const modelsToCheck = textModelKeys
-                .filter(key => {
-                    const provider = allModels.textModels[key]?.provider;
-                    return !SKIP_HEALTH_PROVIDERS.has(provider);
-                })
-                .slice(0, MAX_MODELS_TO_CHECK);
-
-            const skippedProviderModels = textModelKeys.filter(key => {
-                const provider = allModels.textModels[key]?.provider;
-                return SKIP_HEALTH_PROVIDERS.has(provider);
-            });
+            const modelsToCheck = textModelKeys.slice(0, MAX_MODELS_TO_CHECK);
 
             const modelPromises = modelsToCheck.map(async (model) => {
                 const result = await checkModel(model);
@@ -132,28 +119,23 @@ export async function onRequest({ request }) {
 
             const modelResults = await Promise.all(modelPromises);
 
+            modelChecks = {};
+            failedModels = [];
+
             for (const { model, result } of modelResults) {
                 modelChecks[model] = {
                     ok: result.ok,
                     latency_ms: result.latency_ms
                 };
+
                 if (!result.ok) {
                     modelChecks[model].error = result.error;
                     failedModels.push(model);
                 }
             }
 
-            for (const model of skippedProviderModels) {
-                const provider = allModels.textModels[model]?.provider;
-                modelChecks[model] = {
-                    ok: null,
-                    skipped: true,
-                    reason: `${provider} not checked to avoid rate limiting`
-                };
-            }
-
-            if (modelsToCheck.length < textModelKeys.length - skippedProviderModels.length) {
-                const skippedCount = textModelKeys.length - skippedProviderModels.length - modelsToCheck.length;
+            if (textModelKeys.length > MAX_MODELS_TO_CHECK) {
+                const skippedCount = textModelKeys.length - MAX_MODELS_TO_CHECK;
                 modelChecks._skipped = {
                     count: skippedCount,
                     note: `Only first ${MAX_MODELS_TO_CHECK} models checked to prevent timeout`
