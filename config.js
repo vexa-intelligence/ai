@@ -11,7 +11,8 @@ export const API_URLS = {
     TALKAI_URL: "https://talkai.info/chat/send/",
     TALKAI_PAGE_URL: "https://talkai.info/chat/",
     AIFREE_NONCE_URL: "https://aifreeforever.com/api/chat-nonce",
-    AIFREE_ANSWER_URL: "https://aifreeforever.com/api/generate-ai-answer"
+    AIFREE_ANSWER_URL: "https://aifreeforever.com/api/generate-ai-answer",
+    CHATGPTORG_BASE: "https://chatgpt.org",
 };
 
 export const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
@@ -63,6 +64,7 @@ export const TEXT_MODELS = {
     AIFree: [
         { name: "gpt-5", label: "GPT-5", provider: "AIFree", description: "GPT-5 via AIFree" },
     ],
+    ChatGPTOrg: [],
     Toolbaz: [],
 };
 
@@ -89,9 +91,10 @@ export const PROVIDER_SETTINGS = {
     toolbaz: true,
     deepai: true,
     pollinations: true,
-    dolphin: true,
+    dolphin: false,
     talkai: true,
     aifree: true,
+    chatgptorg: true,
 };
 
 export const REQUEST_HEADERS = {

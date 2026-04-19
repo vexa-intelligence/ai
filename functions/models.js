@@ -64,11 +64,22 @@ export async function onRequest({ request }) {
 
             dynamicTextModelsByProvider.DeepAI = deepaiModels;
 
+            const chatgptorgModels = Object.entries(allModels.textModels)
+                .filter(([key, model]) => model.provider === "ChatGPTOrg")
+                .map(([key, model]) => ({
+                    name: key,
+                    label: model.label || key,
+                    provider: "ChatGPTOrg",
+                    description: model.description || `ChatGPTOrg - ${model.label || key}`
+                }));
+
+            dynamicTextModelsByProvider.ChatGPTOrg = chatgptorgModels;
+
             const toolbazModels = Object.entries(allModels.textModels)
                 .filter(([key, model]) => {
                     const p = model.provider || "";
                     return p !== "DeepAI" && p !== "Dolphin AI" && p !== "Pollinations.ai" &&
-                        p !== "AIFree" && p !== "TalkAI" &&
+                        p !== "AIFree" && p !== "TalkAI" && p !== "ChatGPTOrg" &&
                         !(typeof p === 'string' && p.toLowerCase().includes('talkai'));
                 })
                 .map(([key, model]) => ({
