@@ -19,7 +19,7 @@ export const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 
 export const MODEL_SETS = {
     POLLINATIONS_MODELS: new Set(["pol-openai-fast"]),
     DOLPHIN_MODELS: new Set(["dolphin-logical", "dolphin-creative", "dolphin-summarize", "dolphin-code-beginner", "dolphin-code-advanced"]),
-    DEEPAI_MODELS: new Set([]),
+    DEEPAI_MODELS: new Set(["DeepAI"]),
     DEEPAI_IMAGE_MODELS: new Set(["hd"]),
     POLLINATIONS_IMAGE_MODELS: new Set(["flux", "turbo-img", "kontext", "seedream", "nanobanana"])
 };
@@ -74,7 +74,7 @@ export const POLLINATIONS_TEXT_MODELS_LIST = [
     { key: "pol-openai-fast", label: "Pollinations GPT-OSS", provider: "Pollinations.ai", speed: 280, quality: 72 },
 ];
 
-export const DEFAULT_MODEL = "";
+export const DEFAULT_MODEL = "DeepAI";
 
 export const CACHE_SETTINGS = {
     MODELS_CACHE_TTL: 300000
@@ -86,7 +86,7 @@ export const HEALTH_SETTINGS = {
 };
 
 export const PROVIDER_SETTINGS = {
-    toolbaz: true,
+    toolbaz: false,
     deepai: true,
     pollinations: true,
     dolphin: false,

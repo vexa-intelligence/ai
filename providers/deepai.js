@@ -102,7 +102,7 @@ async function scrapeModels() {
 
 export async function getDeepAIDefaultModel() {
     const models = await scrapeModels();
-    return models.size > 0 ? Array.from(models)[0] : null;
+    return models.size > 0 ? Array.from(models)[0] : "DeepAI";
 }
 
 const deepaiProvider = {
