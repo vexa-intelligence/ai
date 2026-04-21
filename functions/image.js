@@ -1,4 +1,4 @@
-import { DEFAULT_IMAGE_MODEL, DEFAULT_IMAGE_PREFERENCE } from "../config.js";
+import { DEFAULT_IMAGE_MODEL, DEFAULT_IMAGE_PREFERENCE } from "../config.js"; 
 import { corsHeaders } from "../lib/utils.js";
 import { resolveImageSource } from "../lib/models.js";
 import { generateImage } from "../lib/ai.js";
@@ -44,7 +44,7 @@ async function run(args, baseUrl, env) {
         success: true,
         prompt: String(prompt).trim().slice(0, 1000),
         model,
-        ...(model !== "flux" && model !== "turbo" && model !== "kontext" && model !== "seedream" && model !== "nanobanana" && { preference }),
+        ...(MODEL_SETS.POLLINATIONS_IMAGE_MODELS.has(model) ? {} : { preference }),
         proxy_url: proxyUrl,
         source: resolveImageSource(model),
         elapsed_ms: Date.now() - t0,

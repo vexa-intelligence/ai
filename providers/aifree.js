@@ -1,7 +1,7 @@
 import { UA, API_URLS, FORM_TEMPLATES, PROVIDER_SETTINGS } from "../config.js";
 import { registerProvider } from "../lib/models.js";
 
-const { AIFREE_NONCE_URL, AIFREE_ANSWER_URL, AIFREE_MODELS_URL } = API_URLS;
+const { AIFREE_NONCE_URL, AIFREE_ANSWER_URL } = API_URLS;
 
 export async function getAiFreeNonce() {
     const r = await fetch(AIFREE_NONCE_URL, {
@@ -13,13 +13,13 @@ export async function getAiFreeNonce() {
     return j.nonce || j.data?.nonce || Object.values(j)[0];
 }
 
-export async function aiFreeComplete(prompt, messages, model) {
+export async function aiFreeComplete(prompt, messages) {
     let fullText = "";
-    await aiFreeCompleteStream(prompt, messages, model, (chunk) => { fullText += chunk; });
+    await aiFreeCompleteStream(prompt, messages, (chunk) => { fullText += chunk; });
     return fullText;
 }
 
-export async function aiFreeCompleteStream(prompt, messages, model, onChunk) {
+export async function aiFreeCompleteStream(prompt, messages, onChunk) {
     const nonce = await getAiFreeNonce();
     const history = messages.slice(0, -1).map(m => ({ role: m.role, content: m.content }));
     const body = {
@@ -36,7 +36,6 @@ export async function aiFreeCompleteStream(prompt, messages, model, onChunk) {
             typingDuration: Math.floor(prompt.length * 120 + Math.random() * 1000),
             mouseMovements: Math.floor(Math.random() * 20 + 5),
         },
-        model,
     };
     const r = await fetch(AIFREE_ANSWER_URL, {
         method: "POST",
@@ -52,38 +51,10 @@ export async function aiFreeCompleteStream(prompt, messages, model, onChunk) {
     }
 }
 
-async function scrapeModels() {
-    try {
-        const url = AIFREE_MODELS_URL || "https://aifreeforever.com/wp-json/custom/v1/models";
-        const r = await fetch(url, { headers: { "User-Agent": UA, "Referer": "https://aifreeforever.com/", "Origin": "https://aifreeforever.com" } });
-        if (!r.ok) return {};
-        const data = await r.json();
-        const result = {};
-        const models = Array.isArray(data) ? data : data.models || data.data || [];
-        for (const m of models) {
-            const id = typeof m === "string" ? m : m.id || m.name || m.slug;
-            if (!id) continue;
-            result[id] = { label: (typeof m === "object" && m.label) || id, provider: "AIFree", speed: 0, quality: 0 };
-        }
-        return result;
-    } catch (_) { return {}; }
-}
-
-let _scrapedKeys = null;
-
 const aifreeProvider = {
     id: "aifree",
     source: "aifreeforever.com",
     enabled: () => PROVIDER_SETTINGS.aifree,
-    scrapeModels: async () => {
-        const models = await scrapeModels();
-        _scrapedKeys = new Set(Object.keys(models));
-        return models;
-    },
-    hasModel: (model) => {
-        if (!_scrapedKeys) return false;
-        return _scrapedKeys.has(model);
-    },
     complete: aiFreeComplete,
     completeStream: aiFreeCompleteStream,
 };

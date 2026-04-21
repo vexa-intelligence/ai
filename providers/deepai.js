@@ -1,4 +1,4 @@
-import { UA, API_URLS, FORM_TEMPLATES } from "../config.js";
+import { UA, API_URLS, FORM_TEMPLATES, DEFAULT_MODEL } from "../config.js";
 import { generateImageKey, buildDeepAIImageBody } from "../lib/crypto.js";
 import { registerProvider } from "../lib/models.js";
 
@@ -102,11 +102,12 @@ async function scrapeModels() {
 
 export async function getDeepAIDefaultModel() {
     const models = await scrapeModels();
-    return models.size > 0 ? Array.from(models)[0] : "DeepAI";
+    return models.size > 0 ? Array.from(models)[0] : DEFAULT_MODEL;
 }
 
 const deepaiProvider = {
     id: "deepai",
+    displayName: "DeepAI",
     source: "deepai.org",
     scrapeModels,
     complete: vexaComplete,

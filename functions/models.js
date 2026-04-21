@@ -54,7 +54,7 @@ export async function onRequest({ request }) {
             dynamicTextModelsByProvider.TalkAI = talkaiModels;
 
             const deepaiModels = Object.entries(allModels.textModels)
-                .filter(([key, model]) => model.provider === "DeepAI")
+                .filter(([key, model]) => model.provider.toLowerCase() === "deepai")
                 .map(([key, model]) => ({
                     name: key,
                     label: model.label || key,
@@ -64,12 +64,24 @@ export async function onRequest({ request }) {
 
             dynamicTextModelsByProvider.DeepAI = deepaiModels;
 
+            const aifreeModels = Object.entries(allModels.textModels)
+                .filter(([key, model]) => model.provider.toLowerCase() === "aifree")
+                .map(([key, model]) => ({
+                    name: key,
+                    label: model.label || key,
+                    provider: "AIFree",
+                    description: model.description || `AIFree - ${model.label || key}`
+                }));
+
+            dynamicTextModelsByProvider.AIFree = aifreeModels.length > 0 ? aifreeModels : TEXT_MODELS.AIFree;
+
             const toolbazModels = Object.entries(allModels.textModels)
                 .filter(([key, model]) => {
                     const p = model.provider || "";
-                    return p !== "DeepAI" && p !== "Dolphin AI" && p !== "Pollinations.ai" &&
-                        p !== "AIFree" && p !== "TalkAI" &&
-                        !(typeof p === 'string' && p.toLowerCase().includes('talkai'));
+                    if (!p) return false;
+                    const pLower = p.toLowerCase();
+                    return pLower !== "deepai" && pLower !== "dolphin ai" && pLower !== "pollinations.ai" &&
+                        pLower !== "aifree" && pLower !== "talkai";
                 })
                 .map(([key, model]) => ({
                     name: key,

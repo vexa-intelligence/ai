@@ -21,7 +21,8 @@ export const MODEL_SETS = {
     DOLPHIN_MODELS: new Set(["dolphin-logical", "dolphin-creative", "dolphin-summarize", "dolphin-code-beginner", "dolphin-code-advanced"]),
     DEEPAI_MODELS: new Set(["DeepAI"]),
     DEEPAI_IMAGE_MODELS: new Set(["hd"]),
-    POLLINATIONS_IMAGE_MODELS: new Set(["flux", "turbo-img", "kontext", "seedream", "nanobanana"])
+    POLLINATIONS_IMAGE_MODELS: new Set(["flux", "turbo-img", "kontext", "seedream", "nanobanana"]),
+    AIFREE_MODELS: new Set(["aifree"]),
 };
 
 export const MODEL_MAPPINGS = {
@@ -41,7 +42,7 @@ export const MODEL_MAPPINGS = {
 export const IMAGE_MODELS = [
     { name: "hd", label: "HD", description: "Standard HD generation - DeepAI" },
     { name: "flux", label: "Flux", description: "Fast, high quality - default" },
-    { name: "turbo", label: "Flux Turbo", description: "Fastest generation" },
+    { name: "turbo-img", label: "Flux Turbo", description: "Fastest generation" },
     { name: "kontext", label: "Flux Kontext", description: "Instruction-following edits" },
     { name: "seedream", label: "Seedream 3", description: "ByteDance - photorealistic" },
     { name: "nanobanana", label: "Nano Banana", description: "Gemini-powered - high detail" },
@@ -61,7 +62,7 @@ export const TEXT_MODELS = {
     ],
     TalkAI: [],
     AIFree: [
-        { name: "gpt-5", label: "GPT-5", provider: "AIFree", description: "GPT-5 via AIFree" },
+        { name: "aifree", label: "AIFree AI", provider: "AIFree", description: "AIFree multi-model assistant" },
     ],
     Toolbaz: [],
 };
@@ -86,7 +87,7 @@ export const HEALTH_SETTINGS = {
 };
 
 export const PROVIDER_SETTINGS = {
-    toolbaz: false,
+    toolbaz: true,
     deepai: true,
     pollinations: true,
     dolphin: false,

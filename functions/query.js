@@ -12,7 +12,7 @@ async function run(prompt, model) {
     const t0 = Date.now();
     try {
         const result = await completeWithAI(prompt, null, model);
-        const actualModel = result.model || model || "DeepAI";
+        const actualModel = result.model || model;
         return Response.json({ success: true, response: result.text, model: actualModel, elapsed_ms: Date.now() - t0, source: resolveSource(model) }, { status: 200, headers: corsHeaders() });
     } catch (e) {
         return Response.json({ success: false, error: "Upstream request failed", detail: e.message }, { status: 502, headers: corsHeaders() });
